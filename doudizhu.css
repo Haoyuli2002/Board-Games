@@ -219,10 +219,6 @@ body {
     min-height: 0;
 }
 
-.zone-left-placeholder {
-    width: 120px;
-    flex-shrink: 0;
-}
 
 .zone-right {
     flex-direction: row;
@@ -396,6 +392,30 @@ body {
     backdrop-filter: blur(10px);
 }
 
+/* 左侧竖向排列版本 */
+.score-board-left {
+    flex-direction: column;
+    gap: 10px;
+    border-radius: 14px;
+    padding: 12px 16px;
+    width: 100%;
+}
+
+.zone-left-placeholder {
+    width: 110px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 放入底牌后自动扩展 */
+.zone-left-placeholder:has(.kitty-area) {
+    width: auto;
+    min-width: 110px;
+}
+
 .score-item {
     display: flex;
     flex-direction: column;
@@ -456,11 +476,6 @@ body {
     transform: scale(0.85);
 }
 
-/* 左侧 placeholder 在放入底牌后扩展 */
-.zone-left-placeholder:has(.kitty-area) {
-    width: auto;
-    min-width: 90px;
-}
 
 .kitty-label {
     font-size: 0.65rem;
@@ -487,15 +502,19 @@ body {
     color: rgba(255, 255, 255, 0.5);
     letter-spacing: 2px;
     text-align: center;
-    padding: 6px 16px;
+    padding: 6px 20px;
     background: rgba(255, 255, 255, 0.04);
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.08);
+    align-self: center;
+    /* 作为 game-container flex 子元素时水平居中 */
+    white-space: nowrap;
 }
 
 .turn-indicator.active {
     color: var(--gold);
     border-color: rgba(201, 168, 76, 0.3);
+    background: rgba(201, 168, 76, 0.06);
 }
 
 /* ========================
@@ -599,7 +618,10 @@ body {
     justify-content: center;
     gap: -4px;
     overflow-x: auto;
-    padding: 4px 4px 8px;
+    overflow-y: visible;
+    /* 允许选中牌向上弹出不被截断 */
+    padding: 20px 4px 8px;
+    /* 顶部预留选中牌上升空间 */
     max-width: 100%;
 }
 

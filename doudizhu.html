@@ -57,13 +57,10 @@
         <!-- 中间行：左占位 + 中央信息 + 右AI（AI1右家） -->
         <div class="middle-row">
 
-            <!-- 左侧占位（出牌后显示底牌） -->
-            <div class="zone-left-placeholder" id="kittyLeftZone"></div>
-
-            <!-- 中央信息面板 -->
-            <div class="center-panel">
+            <!-- 左侧：底分/倍数/积分 + 底牌（出牌后移入） -->
+            <div class="zone-left-placeholder" id="kittyLeftZone">
                 <!-- 得分/倍数 -->
-                <div class="score-board">
+                <div class="score-board score-board-left">
                     <div class="score-item">
                         <span class="score-label">底分</span>
                         <span class="score-val" id="baseScore">—</span>
@@ -77,15 +74,15 @@
                         <span class="score-val" id="myScore">0</span>
                     </div>
                 </div>
+            </div>
 
-                <!-- 底牌区 -->
+            <!-- 中央信息面板（只保留轮次提示和底牌，底牌出牌后会移到左侧） -->
+            <div class="center-panel">
+                <!-- 底牌区（出牌开始后移到左侧） -->
                 <div class="kitty-area" id="kittyArea">
                     <div class="kitty-label">底牌</div>
                     <div class="kitty-cards" id="kittyCards"></div>
                 </div>
-
-                <!-- 当前出牌提示 -->
-                <div class="turn-indicator" id="turnIndicator">等待发牌...</div>
             </div>
 
             <!-- AI 玩家1（右家） -->
@@ -125,6 +122,9 @@
                 </div>
             </div>
         </section>
+
+        <!-- 轮次提示（紧贴操作区上方） -->
+        <div class="turn-indicator" id="turnIndicator">等待发牌...</div>
 
         <!-- 操作区 -->
         <div class="action-panel" id="actionPanel">

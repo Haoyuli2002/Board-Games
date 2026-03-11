@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>斗地主 · Landlord</title>
+    <meta name="description" content="经典斗地主卡牌游戏，与AI对决，成为地主赢取胜利！" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="doudizhu.css" />
+</head>
+
+<body>
+    <div class="table-bg"></div>
+    <div class="vignette"></div>
+
+    <!-- 返回大厅 -->
+    <button class="btn-back" onclick="goLobby()" aria-label="返回大厅">← 大厅</button>
+
+    <!-- 规则按钮 -->
+    <div class="rules-toggle" onclick="toggleRules()" aria-label="游戏规则">?</div>
+    <div class="rules-panel" id="rulesPanel">
+        <h3>游戏规则</h3>
+        <ul>
+            <li>共 54 张牌，3 人游戏：地主 20 张，农民各 17 张</li>
+            <li>叫分决定地主，叫分越高倍数越大（1/2/3分）</li>
+            <li>地主先出牌，先出完手牌者获胜</li>
+            <li>炸弹/王炸可压任意牌型，出一次倍数×2</li>
+            <li><strong>牌型：</strong>单张、对子、三张、三带一/二、顺子（5+）、连对、飞机、炸弹、王炸</li>
+        </ul>
+        <button onclick="toggleRules()" class="close-rules">关闭</button>
+    </div>
+
+    <!-- 主游戏区 -->
+    <div class="game-container" id="gameContainer">
+
+        <!-- 顶部：AI玩家2（上家） -->
+        <section class="player-zone zone-top" id="zone-ai2">
+            <div class="player-avatar ai-avatar">
+                <img class="avatar-icon avatar-img" id="avatar-ai2" src="assets/farmer_avatar.png" alt="上家" />
+                <span class="player-label" id="label-ai2">上家</span>
+                <div class="role-badge" id="role-ai2"></div>
+            </div>
+            <div class="ai-hand" id="hand-ai2">
+                <!-- Card backs shown here -->
+            </div>
+            <div class="last-play-area" id="lastplay-ai2">
+                <div class="last-play-cards" id="lastplaycards-ai2"></div>
+                <span class="pass-badge" id="pass-ai2" style="display:none">不出</span>
+            </div>
+        </section>
+
+        <!-- 中间行：左占位 + 中央信息 + 右AI（AI1右家） -->
+        <div class="middle-row">
+
+            <!-- 左侧占位（出牌后显示底牌） -->
+            <div class="zone-left-placeholder" id="kittyLeftZone"></div>
+
+            <!-- 中央信息面板 -->
+            <div class="center-panel">
+                <!-- 得分/倍数 -->
+                <div class="score-board">
+                    <div class="score-item">
+                        <span class="score-label">底分</span>
+                        <span class="score-val" id="baseScore">—</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-label">倍数</span>
+                        <span class="score-val multiplier" id="multiplier">×1</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-label">积分</span>
+                        <span class="score-val" id="myScore">0</span>
+                    </div>
+                </div>
+
+                <!-- 底牌区 -->
+                <div class="kitty-area" id="kittyArea">
+                    <div class="kitty-label">底牌</div>
+                    <div class="kitty-cards" id="kittyCards"></div>
+                </div>
+
+                <!-- 当前出牌提示 -->
+                <div class="turn-indicator" id="turnIndicator">等待发牌...</div>
+            </div>
+
+            <!-- AI 玩家1（右家） -->
+            <section class="player-zone zone-right" id="zone-ai1">
+                <div class="last-play-area last-play-right" id="lastplay-ai1">
+                    <div class="last-play-cards" id="lastplaycards-ai1"></div>
+                    <span class="pass-badge" id="pass-ai1" style="display:none">不出</span>
+                </div>
+                <div class="ai-hand vertical" id="hand-ai1"></div>
+                <div class="player-avatar ai-avatar">
+                    <img class="avatar-icon avatar-img" id="avatar-ai1" src="assets/farmer_avatar.png" alt="右家" />
+                    <span class="player-label" id="label-ai1">右家</span>
+                    <div class="role-badge" id="role-ai1"></div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- 玩家区（底部） -->
+        <section class="player-zone zone-bottom" id="zone-player">
+            <div class="last-play-area last-play-bottom" id="lastplay-player">
+                <div class="last-play-cards" id="lastplaycards-player"></div>
+                <span class="pass-badge" id="pass-player" style="display:none">不出</span>
+            </div>
+
+            <!-- 玩家手牌 -->
+            <div class="player-hand" id="hand-player"></div>
+
+            <div class="player-info-row">
+                <div class="player-avatar player-self">
+                    <img class="avatar-icon avatar-img" id="avatar-player" src="assets/farmer_avatar.png" alt="你" />
+                    <span class="player-label" id="label-player">你</span>
+                    <div class="role-badge" id="role-player"></div>
+                </div>
+                <div class="card-count-badge">
+                    手牌 <span id="playerCardCount">0</span> 张
+                </div>
+            </div>
+        </section>
+
+        <!-- 操作区 -->
+        <div class="action-panel" id="actionPanel">
+
+            <!-- 叫地主阶段 -->
+            <div class="bid-area" id="bidArea" style="display:none">
+                <p class="bid-prompt" id="bidPrompt">请选择叫分</p>
+                <div class="bid-buttons">
+                    <button class="bid-btn bid-pass" id="bidPass" onclick="playerBid(0)">不叫</button>
+                    <button class="bid-btn bid-1" id="bid1" onclick="playerBid(1)">叫 1 分</button>
+                    <button class="bid-btn bid-2" id="bid2" onclick="playerBid(2)">叫 2 分</button>
+                    <button class="bid-btn bid-3" id="bid3" onclick="playerBid(3)">叫 3 分</button>
+                </div>
+            </div>
+
+            <!-- 出牌阶段 -->
+            <div class="play-area" id="playArea" style="display:none">
+                <div class="play-hint" id="playHint">选择要出的牌</div>
+                <div class="play-buttons">
+                    <button class="play-btn-action btn-pass" id="btnPass" onclick="playerPass()">不出</button>
+                    <button class="play-btn-action btn-play" id="btnPlay" onclick="playerPlay()">出牌</button>
+                </div>
+                <button class="hint-btn" id="hintBtn" onclick="playerHint()">提示</button>
+            </div>
+
+            <!-- 开始/再来 -->
+            <div class="start-area" id="startArea">
+                <button class="start-btn" id="startBtn" onclick="startGame()">开始游戏</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- 结果弹窗 -->
+    <div class="result-overlay" id="resultOverlay" style="display:none">
+        <div class="result-modal">
+            <div class="result-emoji" id="resultEmoji"></div>
+            <h2 class="result-title" id="resultTitle"></h2>
+            <p class="result-sub" id="resultSub"></p>
+            <div class="result-score">
+                <span class="result-score-label">本局得分</span>
+                <span class="result-score-val" id="resultScore"></span>
+            </div>
+            <div class="result-total">
+                <span>累计积分</span>
+                <span id="resultTotal"></span>
+            </div>
+            <div class="result-btns">
+                <button class="result-btn btn-lobby" onclick="goLobby()">返回大厅</button>
+                <button class="result-btn btn-again" onclick="startGame()">再来一局</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="doudizhu.js"></script>
+</body>
+
+</html>

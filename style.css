@@ -1,0 +1,820 @@
+/* ========================
+   ROOT VARIABLES & RESET
+   ======================== */
+:root {
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --gold-dark: #8b6914;
+    --felt-green: #1a5c2a;
+    --felt-dark: #0f3d1a;
+    --cream: #f8f0e3;
+    --red-suit: #cc2222;
+    --black-suit: #111111;
+    --chip-blue: #1a4a9e;
+    --chip-red: #b02020;
+    --chip-green: #1a7a2a;
+    --chip-purple: #6a2a9e;
+    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.6);
+    --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --radius-card: 12px;
+    --transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #0a2010;
+    min-height: 100vh;
+    overflow-x: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ========================
+   BACKGROUND
+   ======================== */
+.table-bg {
+    position: fixed;
+    inset: 0;
+    background-image: url('assets/table_bg.png');
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+}
+
+.vignette {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.7) 100%);
+    z-index: 1;
+}
+
+/* ========================
+   GAME CONTAINER
+   ======================== */
+.game-container {
+    position: relative;
+    z-index: 10;
+    width: min(760px, 100vw);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 12px;
+    gap: 8px;
+}
+
+/* ========================
+   HEADER
+   ======================== */
+.game-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(201, 168, 76, 0.4);
+    border-radius: 50px;
+    backdrop-filter: blur(10px);
+}
+
+.game-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.5rem;
+    color: var(--gold);
+    letter-spacing: 3px;
+    text-shadow: 0 0 20px rgba(201, 168, 76, 0.5);
+}
+
+.chips-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chips-label {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.chips-value {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    color: var(--gold);
+    font-weight: 700;
+    min-width: 60px;
+    text-align: right;
+}
+
+/* BGM Controls */
+.bgm-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bgm-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.bgm-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+.bgm-switch {
+    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.2s ease;
+}
+
+.bgm-switch:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    transform: rotate(90deg);
+}
+
+.bgm-on {
+    color: #4ade80;
+    font-weight: 700;
+}
+
+.bgm-off {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+
+/* ========================
+   SECTIONS (Dealer / Player)
+   ======================== */
+.dealer-section,
+.player-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.score-badge {
+    background: var(--gold);
+    color: #1a1a1a;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 2px 10px;
+    border-radius: 20px;
+    min-width: 36px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+}
+
+.score-badge.bust {
+    background: #cc2222;
+    color: white;
+}
+
+.score-badge.blackjack {
+    background: linear-gradient(135deg, var(--gold), #fff5a0);
+    animation: glow-pulse 1s ease infinite alternate;
+}
+
+@keyframes glow-pulse {
+    from {
+        box-shadow: 0 0 5px var(--gold);
+    }
+
+    to {
+        box-shadow: 0 0 20px var(--gold), 0 0 40px var(--gold-light);
+    }
+}
+
+/* ========================
+   CARDS AREA
+   ======================== */
+.cards-area {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: -8px;
+    min-height: 130px;
+    align-items: center;
+    padding: 8px;
+}
+
+/* ========================
+   PLAYING CARD
+   ======================== */
+.card-wrapper {
+    perspective: 1000px;
+    margin: 0 -6px;
+}
+
+.card {
+    width: 80px;
+    height: 115px;
+    border-radius: var(--radius-card);
+    position: relative;
+    box-shadow: var(--shadow-card);
+    cursor: default;
+}
+
+.card.flip {
+    animation: dealCard 0.4s ease forwards;
+}
+
+@keyframes dealCard {
+    0% {
+        transform: translateY(-60px) scale(0.8);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Face-down: hide front, show back */
+.card.face-down .card-front {
+    display: none;
+}
+
+.card.face-down .card-back {
+    display: block;
+}
+
+.card-front,
+.card-back {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-card);
+}
+
+/* Default: show front, hide back */
+.card-back {
+    display: none;
+}
+
+/* === Card Front === */
+.card-front {
+    background: var(--cream);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border: 2px solid rgba(0, 0, 0, 0.08);
+}
+
+.card-front.red {
+    color: var(--red-suit);
+}
+
+.card-front.black {
+    color: var(--black-suit);
+}
+
+.card-corner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.1;
+}
+
+.card-corner.bottom {
+    align-self: flex-end;
+    transform: rotate(180deg);
+}
+
+.card-rank {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: 'Cinzel', serif;
+    line-height: 1;
+}
+
+.card-suit-corner {
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+.card-center-suit {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    opacity: 0.15;
+}
+
+/* === Card Back === */
+.card-back {
+    background-image: url('assets/card_back.png');
+    background-size: cover;
+    background-position: center;
+    transform: rotateY(180deg);
+    border-radius: var(--radius-card);
+    border: 2px solid rgba(201, 168, 76, 0.3);
+}
+
+/* Card hover */
+.card-wrapper:hover .card:not(.face-down) {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* ========================
+   RESULT BANNER
+   ======================== */
+.game-status-center {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.result-banner {
+    font-family: 'Cinzel', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gold);
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.4s var(--transition);
+    text-align: center;
+    letter-spacing: 2px;
+}
+
+.result-banner.show {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.result-banner.win {
+    color: #4ade80;
+    text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+}
+
+.result-banner.lose {
+    color: #f87171;
+    text-shadow: 0 0 20px rgba(248, 113, 113, 0.5);
+}
+
+.result-banner.push {
+    color: var(--gold);
+}
+
+.result-banner.blackjack {
+    color: var(--gold-light);
+    font-size: 1.8rem;
+    animation: blackjack-flash 0.6s ease alternate infinite;
+}
+
+@keyframes blackjack-flash {
+    from {
+        text-shadow: 0 0 10px var(--gold);
+    }
+
+    to {
+        text-shadow: 0 0 40px var(--gold), 0 0 80px var(--gold-light);
+    }
+}
+
+/* ========================
+   BETTING AREA
+   ======================== */
+.betting-area {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(201, 168, 76, 0.25);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.bet-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bet-label {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.bet-value {
+    font-family: 'Cinzel', serif;
+    font-size: 1.6rem;
+    color: var(--gold);
+    font-weight: 700;
+    min-width: 60px;
+    text-align: center;
+}
+
+/* ========================
+   CHIP BUTTONS
+   ======================== */
+.chip-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.chip-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: white;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease;
+    outline: none;
+    /* Dashed border pattern for chip */
+    background-clip: padding-box;
+}
+
+.chip-btn::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 255, 255, 0.25);
+}
+
+.chip-10 {
+    background: var(--chip-blue);
+    border-color: #4a8ae8;
+}
+
+.chip-25 {
+    background: var(--chip-green);
+    border-color: #4ade80;
+}
+
+.chip-50 {
+    background: var(--chip-red);
+    border-color: #f87171;
+}
+
+.chip-100 {
+    background: var(--chip-purple);
+    border-color: #c084fc;
+}
+
+.chip-clear {
+    background: #444;
+    border-color: #888;
+    font-size: 0.75rem;
+}
+
+.chip-btn:hover {
+    transform: translateY(-4px) scale(1.08);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+.chip-btn:active {
+    transform: translateY(0) scale(0.96);
+}
+
+.chip-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ========================
+   DEAL BUTTON
+   ======================== */
+.deal-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #1a1a1a;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+    border: none;
+    padding: 14px 48px;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(201, 168, 76, 0.4);
+    transition: all 0.3s ease;
+    outline: none;
+    text-transform: uppercase;
+}
+
+.deal-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(201, 168, 76, 0.6);
+    filter: brightness(1.1);
+}
+
+.deal-btn:active {
+    transform: translateY(0);
+}
+
+.deal-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ========================
+   ACTION BUTTONS
+   ======================== */
+.action-area {
+    width: 100%;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 12px 0;
+}
+
+.action-btn {
+    flex: 1;
+    max-width: 160px;
+    padding: 14px 12px;
+    border-radius: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.25s var(--transition);
+    outline: none;
+    backdrop-filter: blur(8px);
+}
+
+.btn-icon {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.btn-hit {
+    background: rgba(74, 144, 226, 0.25);
+    border-color: rgba(74, 144, 226, 0.6);
+    color: #7ec8f8;
+}
+
+.btn-hit:hover {
+    background: rgba(74, 144, 226, 0.5);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(74, 144, 226, 0.3);
+}
+
+.btn-stand {
+    background: rgba(74, 222, 128, 0.2);
+    border-color: rgba(74, 222, 128, 0.5);
+    color: #86efac;
+}
+
+.btn-stand:hover {
+    background: rgba(74, 222, 128, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(74, 222, 128, 0.3);
+}
+
+.btn-double {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: rgba(251, 191, 36, 0.5);
+    color: #fde68a;
+}
+
+.btn-double:hover {
+    background: rgba(251, 191, 36, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(251, 191, 36, 0.3);
+}
+
+.action-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* ========================
+   NEW ROUND AREA
+   ======================== */
+.new-round-area {
+    padding: 12px 0;
+}
+
+/* ========================
+   RULES PANEL (top-left)
+   ======================== */
+.rules-toggle {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(201, 168, 76, 0.2);
+    border: 2px solid var(--gold);
+    color: var(--gold);
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.rules-toggle:hover {
+    background: var(--gold);
+    color: #1a1a1a;
+}
+
+.rules-panel {
+    position: fixed;
+    top: 74px;
+    left: 20px;
+    z-index: 100;
+    background: rgba(10, 30, 15, 0.95);
+    border: 1px solid rgba(201, 168, 76, 0.4);
+    border-radius: 16px;
+    padding: 20px;
+    width: 280px;
+    backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.rules-panel.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+}
+
+.rules-panel h3 {
+    font-family: 'Cinzel', serif;
+    color: var(--gold);
+    font-size: 1rem;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+}
+
+.rules-panel ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rules-panel ul li {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    padding-left: 14px;
+    position: relative;
+}
+
+.rules-panel ul li::before {
+    content: '♦';
+    position: absolute;
+    left: 0;
+    color: var(--gold);
+    font-size: 0.6rem;
+    top: 3px;
+}
+
+.rules-panel ul li strong {
+    color: var(--gold-light);
+}
+
+.close-rules {
+    margin-top: 14px;
+    width: 100%;
+    padding: 8px;
+    background: rgba(201, 168, 76, 0.15);
+    border: 1px solid rgba(201, 168, 76, 0.3);
+    border-radius: 8px;
+    color: var(--gold);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.close-rules:hover {
+    background: rgba(201, 168, 76, 0.3);
+}
+
+/* ========================
+   ANIMATIONS
+   ======================== */
+@keyframes chip-bounce {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.chips-value.updated {
+    animation: chip-bounce 0.4s ease;
+}
+
+/* ========================
+   RESPONSIVE
+   ======================== */
+@media (max-width: 480px) {
+    .game-title {
+        font-size: 1.2rem;
+    }
+
+    .card {
+        width: 68px;
+        height: 100px;
+    }
+
+    .card-rank {
+        font-size: 0.95rem;
+    }
+
+    .card-center-suit {
+        font-size: 1.6rem;
+    }
+
+    .chip-btn {
+        width: 52px;
+        height: 52px;
+        font-size: 0.8rem;
+    }
+
+    .deal-btn {
+        padding: 12px 36px;
+        font-size: 0.9rem;
+    }
+}

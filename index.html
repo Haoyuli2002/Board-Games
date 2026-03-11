@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>21点 · Blackjack</title>
+    <meta name="description" content="经典21点纸牌游戏，与庄家对决，比谁更接近21点而不爆牌。" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <!-- Background Table -->
+    <div class="table-bg"></div>
+    <div class="vignette"></div>
+
+    <!-- Main Game Container -->
+    <div class="game-container" id="gameContainer">
+
+        <!-- Header -->
+        <header class="game-header">
+            <h1 class="game-title">♠ 21点 ♠</h1>
+            <div class="bgm-controls">
+                <button class="bgm-btn" id="bgmBtn" onclick="toggleBGM()" aria-label="背景音乐开关">🎵 Jazz <span
+                        class="bgm-off">OFF</span></button>
+                <button class="bgm-switch" id="bgmSwitch" onclick="switchBGMTrack()" aria-label="切换曲目">⇄</button>
+            </div>
+            <div class="chips-display">
+                <span class="chips-label">筹码</span>
+                <span class="chips-value" id="chipsDisplay">1000</span>
+            </div>
+        </header>
+
+        <!-- Dealer Section -->
+        <section class="dealer-section" aria-label="庄家区域">
+            <div class="section-label">
+                庄家
+                <span class="score-badge" id="dealerScore">?</span>
+            </div>
+            <div class="cards-area" id="dealerCards"></div>
+        </section>
+
+        <!-- Center Status -->
+        <div class="game-status-center">
+            <div class="result-banner" id="resultBanner"></div>
+        </div>
+
+        <!-- Player Section -->
+        <section class="player-section" aria-label="玩家区域">
+            <div class="cards-area" id="playerCards"></div>
+            <div class="section-label">
+                你
+                <span class="score-badge" id="playerScore">0</span>
+            </div>
+        </section>
+
+        <!-- Betting Area -->
+        <div class="betting-area" id="bettingArea">
+            <div class="bet-display">
+                <span class="bet-label">当前下注</span>
+                <span class="bet-value" id="betDisplay">0</span>
+            </div>
+            <div class="chip-buttons">
+                <button class="chip-btn chip-10" id="chip10" onclick="placeBet(10)" aria-label="下注10">10</button>
+                <button class="chip-btn chip-25" id="chip25" onclick="placeBet(25)" aria-label="下注25">25</button>
+                <button class="chip-btn chip-50" id="chip50" onclick="placeBet(50)" aria-label="下注50">50</button>
+                <button class="chip-btn chip-100" id="chip100" onclick="placeBet(100)" aria-label="下注100">100</button>
+                <button class="chip-btn chip-clear" id="chipClear" onclick="clearBet()" aria-label="清除下注">清除</button>
+            </div>
+            <button class="deal-btn" id="dealBtn" onclick="startGame()" aria-label="开始游戏">发牌</button>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-area" id="actionArea" style="display:none">
+            <button class="action-btn btn-hit" id="hitBtn" onclick="playerHit()" aria-label="要牌">
+                <span class="btn-icon">+</span> 要牌
+            </button>
+            <button class="action-btn btn-stand" id="standBtn" onclick="playerStand()" aria-label="停牌">
+                <span class="btn-icon">✓</span> 停牌
+            </button>
+            <button class="action-btn btn-double" id="doubleBtn" onclick="playerDouble()" aria-label="加倍">
+                <span class="btn-icon">×2</span> 加倍
+            </button>
+        </div>
+
+        <!-- New Round Button -->
+        <div class="new-round-area" id="newRoundArea" style="display:none">
+            <button class="deal-btn" id="newRoundBtn" onclick="newRound()" aria-label="新一局">再来一局</button>
+        </div>
+
+    </div>
+
+    <!-- Top-left Rules Toggle -->
+    <div class="rules-toggle" onclick="toggleRules()" id="rulesToggle" aria-label="游戏规则">?</div>
+    <div class="rules-panel" id="rulesPanel">
+        <h3>游戏规则</h3>
+        <ul>
+            <li>目标：手牌点数尽量接近 <strong>21点</strong>，但不能超过</li>
+            <li>数字牌：面值计算；J/Q/K = 10点</li>
+            <li>A：可算 <strong>1点或11点</strong>（自动取最优值）</li>
+            <li><strong>首发21点</strong>（Blackjack）获得 1.5倍赔付</li>
+            <li>庄家点数小于17必须继续要牌</li>
+            <li><strong>加倍</strong>：下注翻倍，再抽一张牌后自动停牌</li>
+        </ul>
+        <button onclick="toggleRules()" class="close-rules">关闭</button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>

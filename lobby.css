@@ -1,0 +1,487 @@
+/* ========================
+   ROOT VARIABLES & RESET
+   ======================== */
+:root {
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --gold-dark: #8b6914;
+    --felt-green: #1a5c2a;
+    --felt-dark: #0a1a0f;
+    --red-accent: #cc2222;
+    --red-light: #ff6060;
+    --green-accent: #22aa44;
+    --cream: #f8f0e3;
+    --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.8);
+    --radius: 20px;
+    --transition-bounce: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', 'Noto Serif SC', sans-serif;
+    background: var(--felt-dark);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ========================
+   BACKGROUND
+   ======================== */
+.lobby-bg {
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(26, 92, 42, 0.4) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 50%, rgba(100, 20, 20, 0.3) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 0%, rgba(201, 168, 76, 0.08) 0%, transparent 50%),
+        linear-gradient(180deg, #050f08 0%, #0a1a0f 50%, #050f08 100%);
+    z-index: 0;
+}
+
+.vignette {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.7) 100%);
+    z-index: 1;
+}
+
+/* ========================
+   FLOATING PARTICLES
+   ======================== */
+.particles {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.particle {
+    position: absolute;
+    bottom: -20px;
+    color: var(--gold);
+    animation: floatUp linear infinite;
+    user-select: none;
+}
+
+@keyframes floatUp {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    90% {
+        opacity: 0.5;
+    }
+
+    100% {
+        transform: translateY(-110vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* ========================
+   MAIN CONTAINER
+   ======================== */
+.lobby-container {
+    position: relative;
+    z-index: 10;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+}
+
+/* ========================
+   HEADER
+   ======================== */
+.lobby-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px 40px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(201, 168, 76, 0.35);
+    border-radius: 50px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 4px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(201, 168, 76, 0.1);
+}
+
+.header-deco {
+    font-size: 1.4rem;
+    letter-spacing: 8px;
+    color: rgba(201, 168, 76, 0.4);
+    flex-shrink: 0;
+}
+
+.header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.crown-icon {
+    font-size: 2rem;
+    color: var(--gold);
+    text-shadow: 0 0 30px rgba(201, 168, 76, 0.8);
+    animation: crown-glow 2s ease-in-out infinite alternate;
+    line-height: 1;
+}
+
+@keyframes crown-glow {
+    from {
+        text-shadow: 0 0 10px rgba(201, 168, 76, 0.5);
+    }
+
+    to {
+        text-shadow: 0 0 40px rgba(201, 168, 76, 1), 0 0 80px rgba(240, 208, 128, 0.6);
+    }
+}
+
+.lobby-title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--gold);
+    letter-spacing: 6px;
+    text-shadow: 0 2px 20px rgba(201, 168, 76, 0.4);
+    line-height: 1;
+}
+
+.lobby-subtitle {
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 300;
+    text-transform: uppercase;
+}
+
+/* ========================
+   TAGLINE
+   ======================== */
+.tagline {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 3px;
+    text-align: center;
+}
+
+/* ========================
+   GAMES GRID
+   ======================== */
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+    width: 100%;
+}
+
+/* ========================
+   GAME CARD
+   ======================== */
+.game-card {
+    position: relative;
+    border-radius: var(--radius);
+    background: rgba(10, 15, 12, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform var(--transition-bounce), box-shadow 0.3s ease;
+    outline: none;
+    backdrop-filter: blur(10px);
+}
+
+.game-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: var(--shadow-lg);
+}
+
+.game-card:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 3px;
+}
+
+/* Glow effect per theme */
+.card-glow {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.game-card:hover .card-glow {
+    opacity: 1;
+}
+
+.glow-green {
+    background: radial-gradient(ellipse at 50% 0%, rgba(34, 170, 68, 0.2) 0%, transparent 70%);
+}
+
+.glow-red {
+    background: radial-gradient(ellipse at 50% 0%, rgba(204, 34, 34, 0.25) 0%, transparent 70%);
+}
+
+/* ========================
+   CARD IMAGE
+   ======================== */
+.card-image-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.game-card:hover .card-image {
+    transform: scale(1.06);
+}
+
+.card-image-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, rgba(10, 15, 12, 0.9) 100%);
+}
+
+/* Play badge */
+.play-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.75);
+    border: 2px solid var(--gold);
+    padding: 12px 24px;
+    border-radius: 50px;
+    color: var(--gold);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 2px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(8px);
+    white-space: nowrap;
+}
+
+.play-icon {
+    font-size: 0.85rem;
+}
+
+.game-card:hover .play-badge {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* ========================
+   CARD INFO
+   ======================== */
+.card-info {
+    position: relative;
+    z-index: 1;
+    padding: 20px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.card-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tag {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+
+.tag-hot {
+    background: rgba(255, 100, 0, 0.2);
+    border: 1px solid rgba(255, 100, 0, 0.4);
+    color: #ff9950;
+}
+
+.tag-new {
+    background: rgba(100, 80, 255, 0.2);
+    border: 1px solid rgba(100, 80, 255, 0.4);
+    color: #a09bff;
+}
+
+.tag-players {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.card-title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: white;
+    line-height: 1;
+    letter-spacing: 2px;
+}
+
+.card-subtitle {
+    font-size: 0.75rem;
+    letter-spacing: 4px;
+    color: rgba(255, 255, 255, 0.3);
+    font-weight: 300;
+    margin-top: -6px;
+}
+
+.card-desc {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.7;
+}
+
+/* ========================
+   CARD FOOTER
+   ======================== */
+.card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.card-stats {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.stat {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.play-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 10px 22px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.btn-green {
+    background: linear-gradient(135deg, #22aa44, #1a7a2a);
+    color: white;
+    box-shadow: 0 4px 20px rgba(34, 170, 68, 0.4);
+}
+
+.btn-green:hover {
+    background: linear-gradient(135deg, #33cc55, #22aa44);
+    box-shadow: 0 6px 30px rgba(34, 170, 68, 0.6);
+    transform: translateY(-2px);
+}
+
+.btn-red {
+    background: linear-gradient(135deg, #cc2222, #8b1a1a);
+    color: white;
+    box-shadow: 0 4px 20px rgba(204, 34, 34, 0.4);
+}
+
+.btn-red:hover {
+    background: linear-gradient(135deg, #ff3333, #cc2222);
+    box-shadow: 0 6px 30px rgba(204, 34, 34, 0.6);
+    transform: translateY(-2px);
+}
+
+/* ========================
+   FOOTER
+   ======================== */
+.lobby-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.footer-suits {
+    font-size: 1.2rem;
+    letter-spacing: 12px;
+    color: rgba(201, 168, 76, 0.3);
+}
+
+.lobby-footer p {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.2);
+    letter-spacing: 2px;
+}
+
+/* ========================
+   RESPONSIVE
+   ======================== */
+@media (max-width: 760px) {
+    .games-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .lobby-title {
+        font-size: 1.6rem;
+    }
+
+    .header-deco {
+        display: none;
+    }
+
+    .lobby-header {
+        padding: 18px 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .lobby-container {
+        padding: 24px 16px 40px;
+        gap: 20px;
+    }
+
+    .card-info {
+        padding: 16px;
+    }
+
+    .card-title {
+        font-size: 1.5rem;
+    }
+}

@@ -198,6 +198,7 @@ let G = {
     lastRealPlay: null,     // last non-pass play
     passCount: 0,
     totalScore: 0,
+    sortDescending: true    // player's hand sort direction
 };
 
 const PLAYER = 0, AI1 = 1, AI2 = 2;
@@ -278,7 +279,10 @@ function renderAIHand(playerId, count) {
 function renderPlayerHand() {
     const el = $('hand-player');
     el.innerHTML = '';
-    const sortedHand = sortCards(G.hands[PLAYER]);
+    let sortedHand = sortCards(G.hands[PLAYER]);
+    if (!G.sortDescending) {
+        sortedHand = sortedHand.slice().reverse();
+    }
     sortedHand.forEach((card, i) => {
         const cardEl = makeCard(card, 'lg');
         cardEl.dataset.idx = i;
@@ -291,6 +295,11 @@ function renderPlayerHand() {
 function toggleSelect(cardEl) {
     if (G.phase !== 'playing' || G.currentTurn !== PLAYER) return;
     cardEl.classList.toggle('selected');
+}
+
+function toggleSort() {
+    G.sortDescending = !G.sortDescending;
+    renderPlayerHand();
 }
 
 function getSelectedCards() {
@@ -823,11 +832,15 @@ async function doAIPlay(playerId) {
 //  AI STRATEGY (Greedy)
 // ========================
 function aiFindBestPlay(hand) {
-    // Control — play the weakest valid combo
     const sorted = sortCards(hand);
+    const smallest = sorted[0];
+    const freq = getFreqMap(hand);
 
-    // Try to play smallest single
-    return [sorted[0]];
+    // 如果最小的牌有对子，就出对子；否则出单张
+    if (freq[smallest.value] >= 2) {
+        return hand.filter(c => c.value === smallest.value).slice(0, 2);
+    }
+    return [smallest];
 }
 
 function findBestPlay(hand, lastPattern) {

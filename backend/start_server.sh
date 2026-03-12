@@ -17,8 +17,8 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
-# 检查API密钥是否配置
-if grep -q "your_deepseek_api_key_here" .env; then
+# 检查API密钥是否配置（忽略注释行）
+if ! grep -v '^#' .env | grep -q "DeepSeek_API_KEY=" || grep -v '^#' .env | grep -q "DeepSeek_API_KEY=''" || grep -v '^#' .env | grep -q "DeepSeek_API_KEY=\"\"" || grep -v '^#' .env | grep -q "DeepSeek_API_KEY=your_deepseek_api_key_here"; then
     echo "❌ 请先在.env文件中配置您的DeepSeek API密钥"
     echo "📝 编辑backend/.env文件，将DeepSeek_API_KEY设置为您的实际密钥"
     exit 1

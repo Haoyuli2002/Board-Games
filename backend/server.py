@@ -28,6 +28,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {
+        "message": "斗地主AI后端服务器正在运行",
+        "status": "active",
+        "endpoints": {
+            "ai_decision": "/api/ai-play",
+            "health": "/health"
+        }
+    }
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "api_key_configured": bool(API_KEY)}
+
 
 class AIRequest(BaseModel):
     phase: str

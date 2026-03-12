@@ -31,6 +31,10 @@
                 <div class="crown-icon">♛</div>
                 <h1 class="lobby-title">游戏大厅</h1>
                 <p class="lobby-subtitle">GAME HALL · PREMIUM CARD GAMES</p>
+                <button id="lobbyBgmBtn" onclick="toggleLobbyBgm()"
+                    style="margin-top: 15px; padding: 6px 12px; background: rgba(0,0,0,0.5); border: 1px solid #d4af37; color: #facc15; border-radius: 20px; cursor: pointer; font-family: 'Inter', sans-serif;">🎵
+                    大厅音乐 <span>OFF</span></button>
+                <audio id="lobbyBgm" src="assets/棋局开场.mp3" loop></audio>
             </div>
             <div class="header-deco right">♥ ♦</div>
         </header>
@@ -112,6 +116,38 @@
     </div>
 
     <script>
+        // BGM Logic
+        let bgmPlaying = false;
+        function toggleLobbyBgm() {
+            const bgm = document.getElementById('lobbyBgm');
+            const btnSpan = document.querySelector('#lobbyBgmBtn span');
+            if (bgmPlaying) {
+                bgm.pause();
+                bgmPlaying = false;
+                btnSpan.textContent = 'OFF';
+                btnSpan.style.color = '#fff';
+            } else {
+                bgm.volume = 0.4;
+                bgm.play().catch(() => { });
+                bgmPlaying = true;
+                btnSpan.textContent = 'ON';
+                btnSpan.style.color = '#4ade80';
+            }
+        }
+
+        // Auto-play attempt on load
+        window.addEventListener('load', () => {
+            const bgm = document.getElementById('lobbyBgm');
+            bgm.volume = 0.4;
+            bgm.play().then(() => {
+                bgmPlaying = true;
+                document.querySelector('#lobbyBgmBtn span').textContent = 'ON';
+                document.querySelector('#lobbyBgmBtn span').style.color = '#4ade80';
+            }).catch(() => {
+                // Autoplay prevented
+            });
+        });
+
         // Enter game with transition animation
         function enterGame(url) {
             const overlay = document.createElement('div');

@@ -22,6 +22,8 @@
     <div class="nav-bar">
         <button class="btn-back" onclick="goLobby()" aria-label="返回大厅">← 大厅</button>
         <button class="btn-pause" id="btnPause" onclick="togglePause()" aria-label="暂停游戏">暂停</button>
+        <button class="btn-pause" id="doudizhuBgmBtn" onclick="toggleDoudizhuBgm()" aria-label="切换音乐"
+            style="margin-left:10px;">🎵 <span style="margin-left: 2px;">OFF</span></button>
         <div class="ai-mode-toggle" id="aiModeToggle">
             <div class="mode-option active" data-mode="normal" onclick="setAiMode('normal')">普通</div>
             <div class="mode-option" data-mode="master" onclick="setAiMode('master')">大师</div>

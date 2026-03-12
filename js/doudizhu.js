@@ -217,6 +217,25 @@ const sfx = {
     win: new Audio('assets/sounds/音效/胜利.mp3'),
     lose: new Audio('assets/sounds/音效/爆牌.mp3'),
 };
+
+// BGM
+const doudizhuBgm = new Audio('assets/斗地主牌桌序曲.mp3');
+doudizhuBgm.loop = true;
+doudizhuBgm.volume = 0.4;
+let isBgmPlaying = false;
+
+function toggleDoudizhuBgm() {
+    isBgmPlaying = !isBgmPlaying;
+    const span = document.querySelector('#doudizhuBgmBtn span');
+    if (isBgmPlaying) {
+        doudizhuBgm.play().catch(() => { });
+        if (span) { span.textContent = 'ON'; span.style.color = '#4ade80'; }
+    } else {
+        doudizhuBgm.pause();
+        if (span) { span.textContent = 'OFF'; span.style.color = '#fff'; }
+    }
+}
+
 function playSound(type) {
     try {
         const a = sfx[type];
@@ -1248,4 +1267,11 @@ window.addEventListener('load', () => {
     renderKitty(false);
     updateScoreUI();
     $('myScore').textContent = '0';
+
+    // Attempt Auto-play BGM
+    doudizhuBgm.play().then(() => {
+        isBgmPlaying = true;
+        const span = document.querySelector('#doudizhuBgmBtn span');
+        if (span) { span.textContent = 'ON'; span.style.color = '#4ade80'; }
+    }).catch(() => { });
 });

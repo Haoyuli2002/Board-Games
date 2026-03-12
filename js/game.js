@@ -560,6 +560,16 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function goLobby() {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:#000;opacity:0;z-index:9999;transition:opacity 0.4s ease;';
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => {
+    ov.style.opacity = '1';
+    setTimeout(() => window.location.href = 'lobby.html', 400);
+  });
+}
+
 // ========================
 //  INIT
 // ========================

@@ -549,6 +549,8 @@ async function startGame() {
         const pfx = i === PLAYER ? 'player' : `ai${i}`;
         const roleEl = $(`role-${pfx}`);
         if (roleEl) { roleEl.className = 'role-badge'; roleEl.textContent = ''; }
+        const bidBadge = $(`bid-${pfx}`);
+        if (bidBadge) { bidBadge.style.display = 'none'; bidBadge.textContent = ''; }
     });
 
     clearAllLastPlays();
@@ -602,7 +604,7 @@ async function runBidding() {
         } else {
             setTurnIndicator(`${NAMES[turn]} 正在叫地主...`, false);
             await sleep(2000 + Math.random() * 2000); // 增加 AI 思考感
-            const bid = aiBid(turn);
+            const bid = await aiBid(turn);
             G.bids[turn] = bid;
             if (bid > G.maxBid) {
                 G.maxBid = bid;
@@ -703,32 +705,21 @@ function evaluateHand(hand) {
 
 function showBidToast(playerId, bid) {
     const pfx = playerId === PLAYER ? 'player' : `ai${playerId}`;
-    const zone = $(ZONE_IDS[playerId]);
+    const badge = $(`bid-${pfx}`);
+    if (!badge) return;
 
-    // 移除旧气泡
-    const oldBubble = zone.querySelector('.bid-bubble');
-    if (oldBubble) oldBubble.remove();
-
-    const bubble = document.createElement('div');
-    bubble.className = 'bid-bubble';
-    bubble.textContent = bid === 0 ? '不叫' : `叫 ${bid} 分`;
+    badge.style.display = 'block';
+    badge.textContent = bid === 0 ? '不叫' : `叫 ${bid} 分`;
 
     if (bid > 0) {
-        bubble.style.background = bid >= 3 ? 'linear-gradient(135deg, #ff8c00, #ff4500)' :
+        badge.style.background = bid >= 3 ? 'linear-gradient(135deg, #ff8c00, #ff4500)' :
             bid >= 2 ? 'linear-gradient(135deg, #fde68a, #fbbf24)' :
                 'linear-gradient(135deg, #d9f99d, #84cc16)';
-        bubble.style.color = bid >= 3 ? '#fff' : '#92400e';
+        badge.style.color = bid >= 3 ? '#fff' : '#92400e';
     } else {
-        bubble.style.background = 'linear-gradient(135deg, #e5e7eb, #9ca3af)';
-        bubble.style.color = '#374151';
+        badge.style.background = 'linear-gradient(135deg, #e5e7eb, #9ca3af)';
+        badge.style.color = '#374151';
     }
-
-    zone.appendChild(bubble);
-
-    // 自动清除
-    setTimeout(() => {
-        if (bubble.parentNode) bubble.remove();
-    }, 2500);
 }
 
 async function assignLandlord() {
@@ -742,6 +733,13 @@ async function assignLandlord() {
 
     // Set roles
     [0, 1, 2].forEach(i => setRoleBadge(i, i === G.landlord ? 'landlord' : 'farmer'));
+
+    // Hide bid badges
+    [0, 1, 2].forEach(i => {
+        const pfx = i === PLAYER ? 'player' : `ai${i}`;
+        const badge = $(`bid-${pfx}`);
+        if (badge) badge.style.display = 'none';
+    });
 
     updateScoreUI();
     clearAllLastPlays();

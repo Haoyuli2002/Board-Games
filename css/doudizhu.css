@@ -275,7 +275,9 @@ body {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    gap: 8px;
+    max-width: 1200px;
+    margin: 0 auto;
+    gap: 16px;
     flex: 1;
     min-height: 0;
 }
@@ -365,6 +367,36 @@ body {
     display: block;
 }
 
+.bid-badge {
+    position: absolute;
+    top: -6px;
+    right: -20px;
+    background: linear-gradient(135deg, #fde68a, #fbbf24);
+    color: #92400e;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    display: none;
+    z-index: 10;
+    white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    animation: badge-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badge-pop {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 /* ========================
    AI HAND (card backs)
    ======================== */
@@ -435,6 +467,7 @@ body {
    ======================== */
 .center-panel {
     flex: 1;
+    max-width: 280px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -469,6 +502,8 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    margin-right: 40px;
+    /* Slight shift to center */
 }
 
 /* 放入底牌后自动扩展 */
@@ -543,23 +578,29 @@ body {
 }
 
 .turn-indicator {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.5);
+    position: absolute;
+    top: 52%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.7);
     letter-spacing: 2px;
     text-align: center;
-    padding: 6px 20px;
-    background: rgba(255, 255, 255, 0.04);
+    padding: 8px 24px;
+    background: rgba(0, 0, 0, 0.6);
     border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    align-self: center;
-    /* 作为 game-container flex 子元素时水平居中 */
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     white-space: nowrap;
 }
 
 .turn-indicator.active {
     color: var(--gold);
-    border-color: rgba(201, 168, 76, 0.3);
-    background: rgba(201, 168, 76, 0.06);
+    border-color: rgba(201, 168, 76, 0.5);
+    background: rgba(201, 168, 76, 0.15);
+    box-shadow: 0 4px 20px rgba(201, 168, 76, 0.3);
 }
 
 /* ========================

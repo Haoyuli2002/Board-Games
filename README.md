@@ -104,6 +104,5 @@ python server.py
 
 1. **立即游玩普通模式**：双击 `lobby.html` → 选择游戏 → 开始！
 2. **体验大师AI**：配置API密钥 → 运行 `./backend/start_server.sh` → 切换大师模式
-3. **获得帮助**：查看 `backend/README_虚拟环境配置.md` 获取详细说明
 
 享受与高智能AI的对决吧！🎮

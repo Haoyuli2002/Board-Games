@@ -193,29 +193,59 @@ class TTSGenerator:
             # 首先检查可用的中文语音
             voices_result = subprocess.run(['say', '-v', '?'], capture_output=True, text=True)
             
-            # 查找中文语音，优先级：Mei-Jia > Ting-Ting > Sin-ji
-            chinese_voice = 'Mei-Jia'  # 默认值
+            # 查找最佳中文语音，优先级：Ting-Ting > Mei-Jia > Sin-ji
+            chinese_voice = None
             if 'Ting-Ting' in voices_result.stdout:
                 chinese_voice = 'Ting-Ting'
-            elif 'Sin-ji' in voices_result.stdout:
-                chinese_voice = 'Sin-ji'
             elif 'Mei-Jia' in voices_result.stdout:
                 chinese_voice = 'Mei-Jia'
-            else:
-                # 如果没有中文语音，使用系统默认语音
-                chinese_voice = None
+            elif 'Sin-ji' in voices_result.stdout:
+                chinese_voice = 'Sin-ji'
             
-            # 构建命令
+            # 生成临时AIFF文件
+            temp_aiff = filepath.with_suffix('.aiff')
+            
+            # 构建命令，添加语速和质量参数
             cmd = ['say']
             if chinese_voice:
                 cmd.extend(['-v', chinese_voice])
-            cmd.extend(['-o', str(filepath), text])
+            # 设置语速（稍快一些，更自然）
+            cmd.extend(['-r', '200'])
+            cmd.extend(['-o', str(temp_aiff), text])
             
-            logger.info(f"Using voice: {chinese_voice or 'default'}")
+            logger.info(f"Using voice: {chinese_voice or 'default'} with enhanced settings")
             result = subprocess.run(cmd, capture_output=True, text=True)
             
-            if result.returncode == 0 and filepath.exists():
-                return True
+            if result.returncode == 0 and temp_aiff.exists():
+                # 转换为WAV格式以获得更好的兼容性和质量
+                try:
+                    # 使用ffmpeg转换（如果可用）
+                    convert_result = subprocess.run([
+                        'ffmpeg', '-i', str(temp_aiff), 
+                        '-ar', '22050',  # 设置采样率
+                        '-ac', '1',      # 单声道
+                        '-y',            # 覆盖现有文件
+                        str(filepath)
+                    ], capture_output=True, text=True)
+                    
+                    if convert_result.returncode == 0:
+                        # 删除临时AIFF文件
+                        temp_aiff.unlink()
+                        logger.info("Converted AIFF to WAV for better quality")
+                        return True
+                    else:
+                        logger.warning("FFmpeg conversion failed, using AIFF format")
+                        # 如果转换失败，重命名AIFF文件为最终文件
+                        final_aiff = filepath.with_suffix('.aiff')
+                        temp_aiff.rename(final_aiff)
+                        return True
+                        
+                except FileNotFoundError:
+                    logger.warning("FFmpeg not found, using AIFF format")
+                    # 重命名AIFF文件为最终文件
+                    final_aiff = filepath.with_suffix('.aiff')
+                    temp_aiff.rename(final_aiff)
+                    return True
             else:
                 logger.error(f"Local TTS failed: {result.stderr}")
                 return False

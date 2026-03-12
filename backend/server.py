@@ -44,15 +44,37 @@ async def get_ai_decision(request: AIRequest):
     try:
         # Phase 1: Bidding
         if request.phase == "bidding":
-            prompt = f"""You are a professional Doudizhu player.
-Current Phase: Bidding (叫地主)
-Your Hand: {json.dumps(request.hand, ensure_ascii=False)}
-Current Max Bid: {request.maxBid}
+            # 计算允许的叫分范围
+            min_valid_bid = (request.maxBid or 0) + 1
+            max_valid_bid = 3
+            
+            if min_valid_bid > max_valid_bid:
+                # 如果已经叫到3分，只能不叫
+                valid_bids = [0]
+            else:
+                valid_bids = [0] + list(range(min_valid_bid, max_valid_bid + 1))
+            
+            prompt = f"""你是一个专业的斗地主玩家。
 
-Evaluate your hand strength. A strong hand has many 2s, Jokers, bombs, or very smooth sequences.
-Respond ONLY with a valid JSON object in this format:
-{{"bid": [0, 1, 2, or 3]}}
-If your hand is poor or mediocre, bid 0. If it's extremely strong, bid 3. You must bid higher than Max Bid (if you want to bid), otherwise bid 0.
+当前阶段：叫地主
+你的手牌：{json.dumps(request.hand, ensure_ascii=False)}
+当前最高叫分：{request.maxBid if request.maxBid else 0}分
+
+叫地主规则：
+- 当前最高叫分是{request.maxBid if request.maxBid else 0}分
+- 你只能叫以下分数之一：{valid_bids}
+- 如果叫分，必须比当前最高分更高
+- 评估手牌实力：强牌（多个2、大小王、炸弹、长顺子）可以考虑叫地主
+- 如果手牌一般或较弱，建议叫0分（不叫）
+
+手牌评估标准：
+- 有大小王或多个2：手牌较强
+- 有炸弹（四张相同）：手牌较强  
+- 有长顺子或多个连对：手牌不错
+- 牌型分散、缺少大牌：手牌较弱
+
+请根据你的手牌实力决定叫分，必须返回以下JSON格式：
+{{"bid": {valid_bids}中的一个数字}}
 """
             
             response = await client.chat.completions.create(
@@ -64,23 +86,43 @@ If your hand is poor or mediocre, bid 0. If it's extremely strong, bid 3. You mu
             # try parsing
             resp_json = json.loads(content)
             bid = resp_json.get("bid", 0)
+            
+            # 验证叫分是否合法
+            if bid not in valid_bids:
+                print(f"AI返回了无效叫分: {bid}, 有效范围: {valid_bids}")
+                # 使用保守策略：如果AI叫分无效，默认不叫
+                bid = 0
+            
             return {"decision": bid}
 
         # Phase 2: Playing
         elif request.phase == "playing":
-            prompt = f"""You are a professional Doudizhu player.
-Current Phase: Playing Cards (出牌)
-Your Hand: {json.dumps(request.hand, ensure_ascii=False)}
-Are you forced to play any valid combo because you have control? (mustPlay): {request.mustPlay}
-Last Real Play to beat: {json.dumps(request.lastRealPlay, ensure_ascii=False) if request.lastRealPlay else "None"}
-Past Rounds History: {json.dumps(request.pastRounds, ensure_ascii=False)}
+            must_play_text = "是" if request.mustPlay else "否"
+            last_play_text = json.dumps(request.lastRealPlay, ensure_ascii=False) if request.lastRealPlay else "无（你是首出）"
+            
+            prompt = f"""你是一个专业的斗地主玩家。
 
-If you are forced to play (mustPlay is true), you must put down a valid combination of cards from your hand (smallest valid combo is usually preferred to start).
-If mustPlay is false, you must beat the "Last Real Play" using a valid combination from your hand that is strictly greater in rule value, OR you can pass.
-If you decide to pass, output {{"action": "pass"}}.
-If you decide to play, output {{"action": "play", "cards": [{{"suit": "...", "rank": "...", "value": ...}}, ...]}}. The "cards" list must ONLY contain exact objects from your Hand array.
+当前阶段：出牌
+你的手牌：{json.dumps(request.hand, ensure_ascii=False)}
+是否必须出牌：{must_play_text}
+需要压过的牌型：{last_play_text}
+历史出牌记录：{json.dumps(request.pastRounds, ensure_ascii=False)}
 
-Respond EXACTLY with valid JSON.
+出牌规则：
+- 如果必须出牌：你获得了出牌权，必须从手牌中出一个合法牌型
+- 如果不必须出牌：你需要出比上家更大的同类型牌型，或者选择"不要"（pass）
+
+出牌策略建议：
+- 必须出牌时：通常出最小的牌型，保存强牌到后面
+- 跟牌时：如果能轻松压过且不浪费强牌，可以跟牌
+- 如果需要用强牌（如2、王、炸弹）才能跟牌，建议"不要"
+- 手牌较少时（5张以下），应该更积极出牌
+
+请分析局势并做出最佳决策，必须返回以下JSON格式之一：
+- 不要：{{"action": "pass"}}
+- 出牌：{{"action": "play", "cards": [从你手牌中选择的确切卡牌对象数组]}}
+
+注意：cards数组中的每个卡牌对象必须完全来自你的手牌数组，包括suit、rank、value等所有字段。
 """
 
             response = await client.chat.completions.create(

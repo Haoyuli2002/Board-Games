@@ -489,16 +489,34 @@ function generateLocalPlayingDialogue(action, lastRealPlay, isLandlord, playedCa
     return '';
 }
 
-function showAIDialogue(playerId, dialogue) {
+// Play base64-encoded audio (mp3) from backend TTS
+function playBase64Audio(base64Data) {
+    if (!base64Data || !audioEnabled) return;
+    try {
+        const audioSrc = 'data:audio/mp3;base64,' + base64Data;
+        const audio = new Audio(audioSrc);
+        audio.volume = 0.8;
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(err => console.warn('Base64 TTS播放失败:', err.message));
+        }
+    } catch (e) {
+        console.warn('Base64 audio decode error:', e);
+    }
+}
+
+function showAIDialogue(playerId, dialogue, skipVoice = false) {
     if (!dialogue || dialogue.trim() === '') return;
-    
+
     const pfx = playerId === PLAYER ? 'player' : `ai${playerId}`;
     const avatarElement = $(`avatar-${pfx}`);
-    
+
     if (!avatarElement) return;
-    
-    // 播放语音（根据玩家选择音源）
-    playVoice(dialogue, playerId);
+
+    // 播放语音（仅本地预设台词时播放，LLM生成的对话跳过语音）
+    if (!skipVoice) {
+        playVoice(dialogue, playerId);
+    }
     
     // Create dialogue bubble
     const bubble = document.createElement('div');
@@ -729,9 +747,13 @@ async function getLLMDecision(context) {
             throw new Error("Backend triggered fallback mode.");
         }
 
-        // Display AI dialogue if available
+        // Display AI dialogue and play TTS audio if available
         if (data.dialogue) {
-            showAIDialogue(context.playerId, data.dialogue);
+            showAIDialogue(context.playerId, data.dialogue, true);
+            // Play edge-tts generated audio from backend
+            if (data.audio_base64) {
+                playBase64Audio(data.audio_base64);
+            }
         }
 
         return decision;
@@ -1149,7 +1171,6 @@ async function assignLandlord() {
     G.currentTurn = G.landlord;
     G.lastRealPlay = null;
     G.passCount = 0;
-    G.passCount = 0;
     await runPlay();
 }
 
@@ -1318,6 +1339,8 @@ async function doAIPlay(playerId) {
     const mustPlay = (G.lastRealPlay === null || G.lastRealPlay.player === playerId);
 
     let chosen = null;
+    let llmDialogueShown = false; // Track if LLM already showed dialogue
+    let llmDecisionValid = false; // Track if LLM returned a valid decision (including valid PASS)
 
     // If master mode, try LLM first
     if (G.aiMode === 'master') {
@@ -1332,34 +1355,41 @@ async function doAIPlay(playerId) {
                 pastRounds: G.pastRounds
             });
 
-            // Enforce mandatory play: if LLM says PASS but it's its turn to lead, ignore LLM
+            // LLM returned a decision — dialogue was already shown in getLLMDecision
+            llmDialogueShown = true;
+
             if (decision === 'PASS') {
                 if (mustPlay) {
                     console.warn(`AI ${playerId} (Master) tried to PASS on mustPlay. Falling back to rule-based.`);
-                    chosen = null; // Fall through to rule-based
+                    // llmDecisionValid stays false → will trigger rule-based fallback
+                    llmDialogueShown = false;
                 } else {
-                    chosen = null;
+                    chosen = null; // Valid pass
+                    llmDecisionValid = true; // LLM decision accepted, skip fallback
                 }
-                // Validate if cards are in hand and get actual card objects with .value
+            } else if (Array.isArray(decision)) {
                 const validCards = decision.map(c => hand.find(h => h.rank === c.rank && h.suit === c.suit)).filter(Boolean);
                 if (validCards.length === decision.length) {
-                    // CRITICAL FIX: Validate that the LLM move actually follows game rules
                     const pattern = detectPattern(validCards);
                     if (pattern && (mustPlay || canBeat(pattern, G.lastRealPlay.pattern))) {
                         chosen = validCards;
+                        llmDecisionValid = true;
                     } else {
                         console.warn(`AI ${playerId} (Master) returned illegal move:`, decision, "Falling back to rule-based.");
-                        chosen = null; // Trigger fallback
                     }
+                } else {
+                    console.warn(`AI ${playerId} (Master) returned cards not in hand:`, decision, "Falling back to rule-based.");
+                    llmDialogueShown = false;
                 }
             }
         } catch (e) {
             console.error('LLM Playing Error, falling back to rule-based:', e);
+            llmDialogueShown = false;
         }
     }
 
-    // Rule-based fallback (if LLM failed, returned invalid cards, or incorrectly PASSed on mustPlay)
-    if (G.aiMode === 'normal' || !chosen) {
+    // Rule-based fallback: only if normal mode OR master mode LLM failed
+    if (G.aiMode === 'normal' || !llmDecisionValid) {
         if (mustPlay) {
             chosen = aiFindBestPlay(hand);
         } else {
@@ -1378,8 +1408,8 @@ async function doAIPlay(playerId) {
         G.passCount++;
         showLastPlay(playerId, [], true);
         
-        // 出牌阶段：40%概率触发对话（需开启语音开关）
-        if (aiDialogueEnabled && Math.random() < 0.4) {
+        // 出牌阶段：仅在LLM未提供对话时，40%概率触发本地对话（需开启语音开关）
+        if (aiDialogueEnabled && !llmDialogueShown && Math.random() < 0.4) {
             const dialogue = generateLocalPlayingDialogue("pass", G.lastRealPlay, G.landlord === playerId, null, playerId);
             if (dialogue) {
                 showAIDialogue(playerId, dialogue);
@@ -1429,8 +1459,8 @@ async function doAIPlay(playerId) {
         showLastPlay(playerId, chosen, false);
         renderAIHand(playerId, hand.length);
 
-        // 出牌阶段：40%概率触发对话（需开启语音开关）
-        if (aiDialogueEnabled && Math.random() < 0.4) {
+        // 出牌阶段：仅在LLM未提供对话时，40%概率触发本地对话（需开启语音开关）
+        if (aiDialogueEnabled && !llmDialogueShown && Math.random() < 0.4) {
             const dialogue = generateLocalPlayingDialogue("play", G.lastRealPlay, G.landlord === playerId, chosen, playerId);
             if (dialogue) {
                 showAIDialogue(playerId, dialogue);

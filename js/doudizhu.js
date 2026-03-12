@@ -208,6 +208,55 @@ const PLAYER = 0, AI1 = 1, AI2 = 2;
 const NAMES = ['你', '右家（AI）', '上家（AI）'];
 const ZONE_IDS = ['zone-player', 'zone-ai1', 'zone-ai2'];
 
+// TTS语音系统
+let voiceMapping = {};
+let audioCache = {};
+
+// 加载语音映射文件
+async function loadVoiceMapping() {
+    try {
+        const response = await fetch('./assets/voices/voice_mapping.json');
+        voiceMapping = await response.json();
+        console.log('语音映射加载成功:', Object.keys(voiceMapping).length, '个语音文件');
+    } catch (error) {
+        console.warn('语音映射加载失败:', error);
+    }
+}
+
+// 播放语音
+function playVoice(text) {
+    // 检查是否有对应的语音文件
+    if (!voiceMapping[text]) {
+        console.log('没有找到语音文件:', text);
+        return;
+    }
+    
+    const audioPath = voiceMapping[text];
+    
+    // 检查缓存
+    if (audioCache[text]) {
+        const audio = audioCache[text];
+        audio.currentTime = 0; // 重置播放位置
+        audio.play().catch(err => console.log('语音播放失败:', err));
+        return;
+    }
+    
+    // 创建新的音频对象
+    const audio = new Audio(audioPath);
+    audio.volume = 0.7; // 设置音量
+    
+    audio.addEventListener('canplay', () => {
+        audioCache[text] = audio; // 缓存音频对象
+        audio.play().catch(err => console.log('语音播放失败:', err));
+    });
+    
+    audio.addEventListener('error', (e) => {
+        console.warn('语音文件加载失败:', audioPath, e);
+    });
+    
+    audio.load();
+}
+
 // ========================
 //  AUDIO (reuse existing files)
 // ========================
@@ -305,6 +354,9 @@ function showAIDialogue(playerId, dialogue) {
     const avatarElement = $(`avatar-${pfx}`);
     
     if (!avatarElement) return;
+    
+    // 播放语音
+    playVoice(dialogue);
     
     // Create dialogue bubble
     const bubble = document.createElement('div');
@@ -1499,6 +1551,9 @@ window.addEventListener('load', () => {
     renderKitty(false);
     updateScoreUI();
     $('myScore').textContent = '0';
+
+    // 加载语音映射
+    loadVoiceMapping();
 
     // Attempt Auto-play BGM
     doudizhuBgm.play().then(() => {

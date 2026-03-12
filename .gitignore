@@ -4,7 +4,40 @@
 # Python
 __pycache__/
 *.pyc
+venv/
+backend/venv/
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# Virtual environments
+.venv
+env/
+ENV/
+env.bak/
+venv.bak/
 
 # Environment Variables
 .env
 backend/.env
+
+# IDE
+.vscode/
+.idea/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# TTS generated files (optional - uncomment if you don't want to commit voice files)
+# assets/voices/*.wav

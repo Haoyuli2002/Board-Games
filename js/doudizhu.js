@@ -296,13 +296,6 @@ function goLobby() {
  */
 function setAiMode(mode) {
     G.aiMode = mode;
-    const toggle = $('aiModeToggle');
-    if (toggle) {
-        toggle.setAttribute('data-mode', mode);
-        toggle.querySelectorAll('.mode-option').forEach(opt => {
-            opt.classList.toggle('active', opt.dataset.mode === mode);
-        });
-    }
     console.log(`AI Mode switched to: ${mode}`);
 }
 
@@ -525,7 +518,7 @@ function renderKitty(reveal = false) {
 //  GAME FLOW
 // ========================
 async function startGame() {
-    // Reset state
+    // Reset state, preserving global settings
     G = {
         phase: 'dealing',
         deck: createDeck(),
@@ -542,6 +535,10 @@ async function startGame() {
         lastRealPlay: null,
         passCount: 0,
         totalScore: G.totalScore || 0,
+        sortDescending: G.sortDescending !== undefined ? G.sortDescending : true,
+        isPaused: G.isPaused || false,
+        aiMode: G.aiMode || 'normal',
+        pastRounds: []
     };
 
     // Reset labels
@@ -939,10 +936,10 @@ async function doAIPlay(playerId) {
             if (decision === 'PASS') {
                 chosen = null;
             } else if (Array.isArray(decision)) {
-                // Validate if cards are in hand
-                const validCards = decision.filter(c => hand.some(h => h.rank === c.rank && h.suit === c.suit));
+                // Validate if cards are in hand and get actual card objects with .value
+                const validCards = decision.map(c => hand.find(h => h.rank === c.rank && h.suit === c.suit)).filter(Boolean);
                 if (validCards.length === decision.length) {
-                    chosen = decision;
+                    chosen = validCards;
                 }
             }
         } catch (e) {

@@ -201,105 +201,55 @@ let G = {
     sortDescending: true,   // player's hand sort direction
     isPaused: false,        // global pause state
     aiMode: 'normal',       // normal | master
-    pastRounds: []          // history of plays for LLM context: [{player, cards, pattern}]
+    pastRounds: [],         // history of plays for LLM context: [{player, cards, pattern}]
+    bgmVolume: 0.5,
+    voiceVolume: 0.8
 };
 
 const PLAYER = 0, AI1 = 1, AI2 = 2;
-const NAMES = ['你', '右家（AI）', '上家（AI）'];
+const NAMES = ['你', '云希', '晓伊'];
 const ZONE_IDS = ['zone-player', 'zone-ai1', 'zone-ai2'];
 
-// ========================
-//  语音映射 - AI1(右家) 用旧语音, AI2(上家) 用ChatTTS语音
-// ========================
-const VOICE_MAPPING_AI1 = {
-    // === 叫地主 - 不叫 ===
-    "不叫": "assets/voices/不叫_0c712120.wav",
-    "先观望一下": "assets/voices/先观望一下_a60722e5.wav",
-    "手牌不太行": "assets/voices/手牌不太行_d713c2e6.wav",
-    "我就看看": "assets/voices/我就看看_25098ecb.wav",
-    "让你们来吧": "assets/voices/让你们来吧_df2bb5f8.wav",
-    // === 叫一分 ===
-    "试试看": "assets/voices/试试看_bb5e4c8d.wav",
-    "叫一分": "assets/voices/叫一分_6324e44a.wav",
-    "我来试试": "assets/voices/我来试试_efe9deb6.wav",
-    // === 叫两分 ===
-    "好牌必须叫": "assets/voices/好牌必须叫_97433d99.wav",
-    "两分": "assets/voices/两分_aa2d006a.wav",
-    "这手牌不错": "assets/voices/这手牌不错_17520179.wav",
-    // === 叫三分 ===
-    "三分到底": "assets/voices/三分到底_ddad80e9.wav",
-    "必胜之局": "assets/voices/必胜之局_14bf332e.wav",
-    "这把稳了": "assets/voices/这把稳了_ae1b8538.wav",
-    // === 不要/跳过 ===
-    "不要": "assets/voices/不要_498957b3.wav",
-    "不出": "assets/voices/不出_72447182.wav",
-    "跟不起": "assets/voices/跟不起_1853f730.wav",
-    "让你过": "assets/voices/让你过_9948dfb9.wav",
-    "先等等": "assets/voices/先等等_ebd602fb.wav",
-    "等等看": "assets/voices/等等看_57e2bce2.wav",
-    // === 炸弹 ===
-    "哈哈炸弹": "assets/voices/哈哈炸弹_68eb7811.wav",
-    "炸弹来了": "assets/voices/炸弹来了_1c7aba83.wav",
-    "爆炸": "assets/voices/爆炸_0652742f.wav",
-    // === 王炸 ===
-    "王炸": "assets/voices/王炸_aceffeef.wav",
-    "双王出击": "assets/voices/双王出击_a08adb98.wav",
-    "无敌了": "assets/voices/无敌了_cf3b5298.wav",
-    // === 顺子/连牌 ===
-    "顺子走起": "assets/voices/顺子走起_e3be537c.wav",
-    "连牌漂亮": "assets/voices/连牌漂亮_5610c30a.wav",
-    "长牌压制": "assets/voices/长牌压制_7652253b.wav",
-    // === 大牌压制（K, A, 2） ===
-    "大牌压制": "assets/voices/大牌压制_09c8fc48.wav",
-    "压你一手": "assets/voices/压你一手_824ae647.wav",
-    "2来了": "assets/voices/2来了_dc1976d5.wav",
-    // === 小牌试探（≤6） ===
-    "出张小牌": "assets/voices/出张小牌_5cbf6376.wav",
-    "先出个小的": "assets/voices/先出个小的_295a0a03.wav",
-    "试探一下": "assets/voices/试探一下_0b98377a.wav",
-    // === 普通跟牌（7~Q） ===
-    "跟上": "assets/voices/跟上_9a977c6d.wav",
-    "出牌": "assets/voices/出牌_50fecc59.wav",
-    "来了": "assets/voices/来了_0424ac2f.wav",
-    "接着": "assets/voices/接着_7c90c225.wav",
+const AVATAR_MAP = {
+    [AI1]: {
+        farmer: 'assets/avatars/yunxi_farmer.png',
+        landlord: 'assets/avatars/yunxi_landlord.png'
+    },
+    [AI2]: {
+        farmer: 'assets/avatars/xiaoyi_farmer.png',
+        landlord: 'assets/avatars/xiaoyi_landlord.png'
+    },
+    [PLAYER]: {
+        farmer: 'assets/farmer_avatar.png',
+        landlord: 'assets/landlord_avatar.png'
+    }
 };
 
-const VOICE_MAPPING_AI2 = {
-    // === 叫地主 - 不叫 ===
-    "你们来吧": "assets/voices_chattts/你们来吧_f952affc.wav",
-    "这手牌一般": "assets/voices_chattts/这手牌一般_14aad410.wav",
-    "你们争吧": "assets/voices_chattts/你们争吧_1b2726f3.wav",
-    // === 叫一分 ===
-    "试试看": "assets/voices_chattts/试试看_bb5e4c8d.wav",
-    "我来试试": "assets/voices_chattts/我来试试_efe9deb6.wav",
-    // === 叫两分 ===
-    "这手牌不错": "assets/voices_chattts/这手牌不错_17520179.wav",
-    // === 叫三分 ===
-    "这把稳了": "assets/voices_chattts/这把稳了_ae1b8538.wav",
-    // === 不要/跳过 ===
-    "不要": "assets/voices_chattts/不要_498957b3.wav",
-    // === 炸弹 ===
-    "炸弹": "assets/voices_chattts/炸弹_72e6f0aa.wav",
-    // === 王炸 ===
-    "王炸": "assets/voices_chattts/王炸_aceffeef.wav",
-    "双王出击": "assets/voices_chattts/双王出击_a08adb98.wav",
-    // === 大牌压制（K, A, 2） ===
-    "压你一手": "assets/voices_chattts/压你一手_824ae647.wav",
-    "压死": "assets/voices_chattts/压死_09697099.wav",
-    // === 小牌试探（≤6） ===
-    "出张小牌": "assets/voices_chattts/出张小牌_5cbf6376.wav",
-    "小牌开路": "assets/voices_chattts/小牌开路_af7178cc.wav",
-};
+// 移除本地语音音源映射，全面使用 Edge TTS
+const VOICE_MAPPINGS = null;
 
-// 根据玩家ID获取语音映射
-function getVoiceMapping(playerId) {
-    return playerId === AI2 ? VOICE_MAPPING_AI2 : VOICE_MAPPING_AI1;
+// 已移除本地语音音源映射，全面使用 Edge TTS
+
+/**
+ * Update player and AI avatars based on their current role (Farmer/Landlord)
+ */
+function updateAvatars() {
+    [PLAYER, AI1, AI2].forEach(id => {
+        const pfx = id === PLAYER ? 'player' : `ai${id}`;
+        const img = document.getElementById(`avatar-${pfx}`);
+        if (!img) return;
+
+        const role = (G.landlord === id) ? 'landlord' : 'farmer';
+        if (AVATAR_MAP[id] && AVATAR_MAP[id][role]) {
+            img.src = AVATAR_MAP[id][role];
+        }
+    });
 }
 
 let audioCache = {};
 let audioEnabled = false;
 let audioUnlocked = false;
-let aiDialogueEnabled = false; // AI语音开关，默认关闭
+let aiDialogueEnabled = true; // AI语音交互，默认开启
 
 function toggleAIDialogue() {
     aiDialogueEnabled = !aiDialogueEnabled;
@@ -315,22 +265,16 @@ function toggleAIDialogue() {
 function _unlockAudioOnce() {
     if (audioUnlocked) return;
     audioUnlocked = true;
-    // 预创建全部语音 Audio 对象（两套映射），确保在用户手势上下文中完成
-    [VOICE_MAPPING_AI1, VOICE_MAPPING_AI2].forEach(mapping => {
-        Object.entries(mapping).forEach(([text, path]) => {
-            const key = path; // 用路径作key，避免同文本不同路径冲突
-            if (audioCache[key]) return;
-            try {
-                const a = new Audio(encodeURI(path));
-                a.preload = 'auto';
-                a.volume = 0.7;
-                audioCache[key] = a;
-            } catch (e) { /* ignore */ }
-        });
-    });
-    console.log('音频已解锁，预创建', Object.keys(audioCache).length, '个语音对象');
+
+    // 预创建无声片段以激活浏览器的音频上下文
+    const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+    silentAudio.play().catch(() => { });
+
+    console.log('音频系统已通过用户交互解锁');
 }
-document.addEventListener('click', _unlockAudioOnce, { once: true });
+document.addEventListener('mousedown', _unlockAudioOnce, { once: true });
+document.addEventListener('touchstart', _unlockAudioOnce, { once: true });
+document.addEventListener('keydown', _unlockAudioOnce, { once: true });
 
 // 初始化音频系统（游戏开始时调用）
 function initAudioSystem() {
@@ -341,43 +285,30 @@ function initAudioSystem() {
 
 // 加载语音映射文件（内嵌映射已就绪，此函数保留作兼容用途）
 async function loadVoiceMapping() {
-    const total = Object.keys(VOICE_MAPPING_AI1).length + Object.keys(VOICE_MAPPING_AI2).length;
-    console.log('语音映射已就绪: AI1', Object.keys(VOICE_MAPPING_AI1).length, '+ AI2', Object.keys(VOICE_MAPPING_AI2).length, '=', total, '个');
+    console.log('音频系统已就绪（Edge TTS 模式）');
 }
 
-// 播放语音（根据玩家ID选择对应音源）
-function playVoice(text, playerId) {
-    if (!audioEnabled) {
-        console.log('音频系统未激活，跳过语音播放:', text);
-        return;
-    }
+// 播放语音（向后端请求 Edge TTS）
+async function playVoice(text, playerId) {
+    if (!audioEnabled || !aiDialogueEnabled) return Promise.resolve();
 
-    const mapping = getVoiceMapping(playerId);
-    const path = mapping[text];
-    if (!path) {
-        console.log('没有找到语音文件:', text, '(player:', playerId, ')');
-        return;
-    }
+    try {
+        const response = await fetch('http://127.0.0.1:5000/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, playerId })
+        });
 
-    const play = (audio) => {
-        audio.currentTime = 0;
-        const p = audio.play();
-        if (p && typeof p.catch === 'function') {
-            p.catch(err => console.warn('语音播放失败 [' + text + ']:', err.message));
+        if (response.ok) {
+            const data = await response.json();
+            if (data.audio_base64) {
+                // Await audio to finish
+                await playBase64Audio(data.audio_base64);
+            }
         }
-    };
-
-    // 用路径作为缓存key
-    if (audioCache[path]) {
-        play(audioCache[path]);
-        return;
+    } catch (e) {
+        console.warn('TTS请求失败:', e);
     }
-
-    // 回退：即时创建
-    const audio = new Audio(encodeURI(path));
-    audio.volume = 0.7;
-    audioCache[path] = audio;
-    play(audio);
 }
 
 // ========================
@@ -425,16 +356,16 @@ function playSound(type) {
 // 每个AI的台词池（只含有对应语音文件的台词）
 const BIDDING_LINES = {
     [AI1]: {
-        0: ['不叫', '先观望一下', '手牌不太行', '我就看看', '让你们来吧'],
-        1: ['试试看', '叫一分', '我来试试'],
-        2: ['好牌必须叫', '两分', '这手牌不错'],
-        3: ['三分到底', '必胜之局', '这把稳了'],
+        0: ['不叫', '先观望一下', '手牌不太行', '我就看看', '让你们来吧', '这把我不掺和', '牌太臭了，不要', '低调点，过'],
+        1: ['试试看', '叫一分', '我来试试', '一分意思一下', '小跟一把', '牌一般，弄点彩头'],
+        2: ['好牌必须叫', '两分', '这手牌不错', '我感觉有戏', '两分走起'],
+        3: ['三分到底', '必胜之局', '这把稳了', '地主我当定了', '给你们个惊喜，三分', '不装了，我全要'],
     },
     [AI2]: {
-        0: ['你们来吧', '这手牌一般', '你们争吧'],
-        1: ['试试看', '我来试试'],
-        2: ['这手牌不错'],
-        3: ['这把稳了'],
+        0: ['你们来吧', '这手牌一般', '你们争吧', '不叫，等下把', '我就看看风景', '牌散得像沙子'],
+        1: ['试试看', '我来试试', '一分吧', '看在运气的份上', '牌还行，叫个一分'],
+        2: ['这手牌不错', '两分拿捏', '感觉能打，两分', '既然你们不叫，我来'],
+        3: ['这把稳了', '地主是我的', '三分全满', '手握重兵，三分', '让你们见识下什么叫地主'],
     },
 };
 
@@ -447,22 +378,22 @@ function generateLocalBiddingDialogue(bid, maxBid, hand, playerId) {
 
 const PLAYING_LINES = {
     [AI1]: {
-        pass:     ['不要', '不出', '跟不起', '让你过', '先等等', '等等看'],
-        bomb:     ['哈哈炸弹', '炸弹来了', '爆炸'],
-        rocket:   ['王炸', '双王出击', '无敌了'],
-        straight: ['顺子走起', '连牌漂亮', '长牌压制'],
-        bigCard:  ['大牌压制', '压你一手', '2来了'],
-        smallCard:['出张小牌', '先出个小的', '试探一下'],
-        normal:   ['跟上', '出牌', '来了', '接着'],
+        pass: ['不要', '不出', '跟不起', '让你过', '先等等', '等等看', '这手真大，过', '队友加油', '牌好也让你'],
+        bomb: ['哈哈炸弹', '炸弹来了', '爆炸', '见识下火力的厉害', '这下整齐了'],
+        rocket: ['王炸', '双王出击', '无敌了', '炸得你怀疑人生', '全场最高级'],
+        straight: ['顺子走起', '连牌漂亮', '长牌压制', '一条龙送给你', '顺风顺水'],
+        bigCard: ['大牌压制', '压你一手', '这手总该我大了', '顶级单张'],
+        smallCard: ['出张小牌', '先出个小的', '试探一下', '投石问路', '抛砖引玉'],
+        normal: ['跟上', '出牌', '来了', '接着', '再接再厉', '看招'],
     },
     [AI2]: {
-        pass:     ['不要'],
-        bomb:     ['炸弹'],
-        rocket:   ['王炸', '双王出击'],
-        straight: [],  // 无对应语音，不说话
-        bigCard:  ['压你一手', '压死'],
-        smallCard:['出张小牌', '小牌开路'],
-        normal:   [],  // 无对应语音，不说话
+        pass: ['不要', '过', '不要，让你', '这牌我也接不动', '看你的了', '稳住别浪'],
+        bomb: ['炸弹', '轰你一下', '炸飞你', '这手牌够硬吧'],
+        rocket: ['王炸', '双王出击', '这个最大，没道理', '直接送走'],
+        straight: ['顺子送上', '龙牌出击', '长龙过境', '一顺到底'],
+        bigCard: ['压你一手', '压死', '别想溜', '这手牌我看谁大'],
+        smallCard: ['出张小牌', '小牌开路', '试个小的', '轻轻放一张', '从小打起'],
+        normal: ['跟上', '过一张', '轮到我了', '继续出', '轮换一下'],
     },
 };
 
@@ -491,21 +422,39 @@ function generateLocalPlayingDialogue(action, lastRealPlay, isLandlord, playedCa
 
 // Play base64-encoded audio (mp3) from backend TTS
 function playBase64Audio(base64Data) {
-    if (!base64Data || !audioEnabled) return;
-    try {
-        const audioSrc = 'data:audio/mp3;base64,' + base64Data;
-        const audio = new Audio(audioSrc);
-        audio.volume = 0.8;
-        const p = audio.play();
-        if (p && typeof p.catch === 'function') {
-            p.catch(err => console.warn('Base64 TTS播放失败:', err.message));
+    return new Promise((resolve) => {
+        if (!base64Data) return resolve();
+        if (!audioEnabled || !aiDialogueEnabled) {
+            console.log('语音播放被禁用');
+            return resolve();
         }
-    } catch (e) {
-        console.warn('Base64 audio decode error:', e);
-    }
+        try {
+            const audioSrc = 'data:audio/mp3;base64,' + base64Data;
+            const audio = new Audio(audioSrc);
+            audio.volume = G.voiceVolume; // 使用全局音量设置
+
+            audio.onended = resolve;
+            audio.onerror = (e) => {
+                console.warn('Audio playback error:', e);
+                resolve();
+            };
+
+            const p = audio.play();
+            if (p && typeof p.catch === 'function') {
+                p.catch(err => {
+                    console.warn('Base64 TTS播放失败:', err.message);
+                    resolve();
+                });
+            }
+        } catch (e) {
+            console.warn('Base64 audio decode error:', e);
+            resolve();
+        }
+    });
 }
 
-function showAIDialogue(playerId, dialogue, skipVoice = false) {
+// 展示 AI 对话气泡并播放语音
+async function showAIDialogue(playerId, dialogue, skipVoice = false) {
     if (!dialogue || dialogue.trim() === '') return;
 
     const pfx = playerId === PLAYER ? 'player' : `ai${playerId}`;
@@ -513,67 +462,70 @@ function showAIDialogue(playerId, dialogue, skipVoice = false) {
 
     if (!avatarElement) return;
 
-    // 播放语音（仅本地预设台词时播放，LLM生成的对话跳过语音）
-    if (!skipVoice) {
-        playVoice(dialogue, playerId);
-    }
-    
-    // Create dialogue bubble
-    const bubble = document.createElement('div');
-    bubble.className = 'ai-dialogue-bubble';
-    
-    // 智能分类对话样式
-    const dialogueType = classifyDialogue(dialogue);
-    if (dialogueType !== 'normal') {
-        bubble.classList.add(dialogueType);
-    }
-    
-    // 直接设置文本内容，不使用打字机效果
-    bubble.textContent = dialogue;
-    
-    // Position the bubble relative to the avatar
-    const container = avatarElement.closest('.player-zone') || avatarElement.closest('.player-info-row');
-    
-    if (container) {
-        container.style.position = 'relative';
-        bubble.style.position = 'absolute';
-        
-        if (playerId === AI2) { // Top AI
-            bubble.style.bottom = '100%';
-            bubble.style.left = '50%';
-            bubble.style.transform = 'translateX(-50%)';
-            bubble.style.marginBottom = '8px';
-        } else if (playerId === AI1) { // Right AI
-            bubble.style.right = '100%';
-            bubble.style.top = '50%';
-            bubble.style.transform = 'translateY(-50%)';
-            bubble.style.marginRight = '8px';
-        } else { // Player (shouldn't happen, but just in case)
-            bubble.style.top = '100%';
-            bubble.style.left = '50%';
-            bubble.style.transform = 'translateX(-50%)';
-            bubble.style.marginTop = '8px';
+    // 延迟显示气泡，以主观同步音频开始的时机
+    setTimeout(() => {
+        // Create dialogue bubble
+        const bubble = document.createElement('div');
+        bubble.className = 'ai-dialogue-bubble';
+
+        // 智能分类对话样式
+        const dialogueType = classifyDialogue(dialogue);
+        if (dialogueType !== 'normal') {
+            bubble.classList.add(dialogueType);
         }
-        
-        // Remove any existing dialogue bubbles from this player
-        const existingBubble = container.querySelector('.ai-dialogue-bubble');
-        if (existingBubble) {
-            existingBubble.remove();
-        }
-        
-        container.appendChild(bubble);
-        
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-            if (bubble && bubble.parentNode) {
-                bubble.style.opacity = '0';
-                setTimeout(() => {
-                    if (bubble && bubble.parentNode) {
-                        bubble.remove();
-                    }
-                }, 500);
+
+        // 直接设置文本内容，不使用打字机效果
+        bubble.textContent = dialogue;
+
+        // Position the bubble relative to the avatar icon
+        const container = avatarElement.parentElement; // .player-avatar
+
+        if (container) {
+            bubble.style.position = 'absolute';
+
+            if (playerId === AI2) { // Top AI (上家)
+                // Move to the LEFT of avatar to stay horizontal
+                bubble.style.right = '100%';
+                bubble.style.top = '50%';
+                bubble.style.transform = 'translateY(-50%)';
+                bubble.style.marginRight = '12px';
+            } else if (playerId === AI1) { // Right AI (云希)
+                // Move ABOVE avatar to avoid overlap with played cards on the left
+                bubble.style.bottom = '100%';
+                bubble.style.right = '0';
+                bubble.style.marginBottom = '12px';
+            } else { // Player
+                bubble.style.bottom = '100%';
+                bubble.style.left = '50%';
+                bubble.style.transform = 'translateX(-50%)';
+                bubble.style.marginBottom = '12px';
             }
-        }, 3000);
+
+            // Remove any existing dialogue bubbles from this player
+            const existingBubble = container.querySelector('.ai-dialogue-bubble');
+            if (existingBubble) {
+                existingBubble.remove();
+            }
+
+            container.appendChild(bubble);
+
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                if (bubble && bubble.parentNode) {
+                    bubble.style.opacity = '0';
+                    setTimeout(() => {
+                        if (bubble && bubble.parentNode) {
+                            bubble.remove();
+                        }
+                    }, 300);
+                }
+            }, 3000);
+        }
+    }, 300);
+
+    // 播放语音并等待读完（Edge TTS 实时生成）
+    if (!skipVoice) {
+        await playVoice(dialogue, playerId);
     }
 }
 
@@ -584,19 +536,19 @@ function classifyDialogue(dialogue) {
     const excited = ['炸弹', '王炸', '双王出击', '稳了'];
     const confident = ['好牌必须叫', '压你一手', '压死', '两分拿下', '顺子走起'];
     const casual = ['试试看', '叫一分', '我来试试', '出张小牌', '试探一下', '小牌开路', '有点意思', '该我了'];
-    
+
     for (const keyword of excited) {
         if (dialogue.includes(keyword)) return 'excited';
     }
-    
+
     for (const keyword of confident) {
         if (dialogue.includes(keyword)) return 'confident';
     }
-    
+
     for (const keyword of casual) {
         if (dialogue.includes(keyword)) return 'casual';
     }
-    
+
     return 'normal';
 }
 
@@ -623,6 +575,69 @@ function restartGame() {
         // Typically "Restart" means reset current game board, so let's just trigger startGame
         startGame();
     }
+}
+
+/**
+ * Completely reset the game and UI to initial state
+ */
+function resetGameToInitial() {
+    // Reset global state G
+    G.phase = 'idle';
+    G.hands = [[], [], []];
+    G.kitty = [];
+    G.landlord = -1;
+    G.currentTurn = -1;
+    G.maxBid = 0;
+    G.baseScore = 0;
+    G.multiplier = 1;
+    G.passCount = 0;
+    G.lastRealPlay = null;
+    G.pastRounds = [];
+    G.totalScore = 0;
+    G.isPaused = false;
+
+    // Clear UI components
+    clearAllLastPlays();
+    $('hand-player').innerHTML = '';
+    $('hand-ai1').innerHTML = '';
+    $('hand-ai1').className = 'ai-hand vertical'; // Ensure vertical class is restored
+    $('hand-ai2').innerHTML = '';
+    $('resultOverlay').style.display = 'none';
+
+    // Hide role badges
+    [0, 1, 2].forEach(pid => {
+        const pfx = pid === PLAYER ? 'player' : `ai${pid}`;
+        const badge = $(`role-${pfx}`);
+        if (badge) {
+            badge.textContent = '';
+            badge.className = 'role-badge';
+        }
+        const bidBadge = $(`bid-badge-${pfx}`);
+        if (bidBadge) bidBadge.textContent = '';
+    });
+
+    // Reset avatars to Farmer
+    updateAvatars();
+
+    // Reset indicators and areas
+    showStartArea();
+    renderKitty(false);
+    updateScoreUI();
+    setTurnIndicator('点击「开始游戏」开始对局');
+    $('myScore').textContent = '0';
+
+    // Re-enable mode selection
+    const modeSelect = $('aiModeSelect');
+    if (modeSelect) modeSelect.disabled = false;
+
+    console.log("Game reset to initial state.");
+}
+
+/**
+ * Exit the game and return to initial state
+ */
+function exitGame() {
+    resetGameToInitial();
 }
 
 // ========================
@@ -749,31 +764,36 @@ async function getLLMDecision(context) {
 
         // Display AI dialogue and play TTS audio if available
         if (data.dialogue) {
-            showAIDialogue(context.playerId, data.dialogue, true);
-            // Play edge-tts generated audio from backend
+            // Await dialogue to match timing
+            await showAIDialogue(context.playerId, data.dialogue, true);
+            // Play edge-tts generated audio from backend and await completion
             if (data.audio_base64) {
-                playBase64Audio(data.audio_base64);
+                await playBase64Audio(data.audio_base64);
             }
         }
 
-        return decision;
+        // Return both decision and dialogue for history tracking
+        return { decision, dialogue: data.dialogue || "" };
 
     } catch (e) {
         console.warn("Failed to connect to AI server, falling back to rule-based:", e);
         // Rule-based Fallback directly here since it failed to get a valid response
         if (context.phase === 'bidding') {
             const strength = evaluateHand(context.hand);
-            if (strength > 70) return 3;
-            if (strength > 40 && context.maxBid < 2) return 2;
-            return 0;
+            let decision = 0;
+            if (strength > 70) decision = 3;
+            else if (strength > 40 && context.maxBid < 2) decision = 2;
+            return { decision, dialogue: "" };
         }
 
         if (context.phase === 'playing') {
-            if (context.mustPlay) return aiFindBestPlay(context.hand);
-            return findBestPlay(context.hand, context.lastRealPlay ? context.lastRealPlay.pattern : null);
+            let decision;
+            if (context.mustPlay) decision = aiFindBestPlay(context.hand);
+            else decision = findBestPlay(context.hand, context.lastRealPlay ? context.lastRealPlay.pattern : null);
+            return { decision, dialogue: "" };
         }
     }
-    return null;
+    return { decision: null, dialogue: "" };
 }
 
 function renderPlayerHand() {
@@ -915,7 +935,7 @@ function renderKitty(reveal = false) {
 async function startGame() {
     // 初始化音频系统（用户点击开始游戏时）
     initAudioSystem();
-    
+
     // Reset state, preserving global settings
     G = {
         phase: 'dealing',
@@ -959,6 +979,7 @@ async function startGame() {
     setTurnIndicator('发牌中...', false);
     updateScoreUI();
     renderKitty(false);
+    updateAvatars();
 
     // Deal cards
     await sleep(300);
@@ -1022,11 +1043,11 @@ async function runBidding() {
     // 清除高亮
     ZONE_IDS.forEach(id => $(id).classList.remove('bidding-active'));
 
-    // If no one bid, restart bidding (all pass scenario)
+    // If no one bid, reshuffle and redeal
     if (G.landlord === -1) {
-        // Auto-assign landlord to bidder
-        G.landlord = G.bidder;
-        G.maxBid = 1;
+        setTurnIndicator("无人叫分，重新发牌...", true);
+        await sleep(2000);
+        return startGame();
     }
 
     await assignLandlord();
@@ -1056,7 +1077,7 @@ async function aiBid(playerId) {
     // If master mode, try LLM first
     if (G.aiMode === 'master') {
         try {
-            const result = await getLLMDecision({
+            const { decision: result, dialogue: llmDialogue } = await getLLMDecision({
                 phase: 'bidding',
                 playerId: playerId,
                 hand: G.hands[playerId],
@@ -1088,7 +1109,7 @@ async function aiBid(playerId) {
     if (aiDialogueEnabled) {
         dialogue = generateLocalBiddingDialogue(decision, G.maxBid, hand, playerId);
         if (dialogue) {
-            showAIDialogue(playerId, dialogue);
+            await showAIDialogue(playerId, dialogue);
         }
     }
 
@@ -1156,6 +1177,7 @@ async function assignLandlord() {
     });
 
     updateScoreUI();
+    updateAvatars();
     clearAllLastPlays();
 
     if (G.landlord === PLAYER) {
@@ -1273,7 +1295,8 @@ async function playerPlay() {
         player: PLAYER,
         playerName: NAMES[PLAYER],
         cards: [...selected],
-        pattern: detectPattern(selected)
+        pattern: detectPattern(selected),
+        dialogue: "" // Player currently doesn't have dialogue, but we keep field consistent
     });
 }
 
@@ -1296,7 +1319,8 @@ async function playerPass() {
         player: PLAYER,
         playerName: NAMES[PLAYER],
         cards: [],
-        pattern: { type: 'pass' }
+        pattern: { type: 'pass' },
+        dialogue: ""
     });
 
     // If everyone passed the last real play, reset
@@ -1339,13 +1363,14 @@ async function doAIPlay(playerId) {
     const mustPlay = (G.lastRealPlay === null || G.lastRealPlay.player === playerId);
 
     let chosen = null;
-    let llmDialogueShown = false; // Track if LLM already showed dialogue
-    let llmDecisionValid = false; // Track if LLM returned a valid decision (including valid PASS)
+    let llmDialogueShown = false;
+    let llmDecisionValid = false;
+    let finalDialogue = "";
 
     // If master mode, try LLM first
     if (G.aiMode === 'master') {
         try {
-            const decision = await getLLMDecision({
+            const { decision, dialogue } = await getLLMDecision({
                 phase: 'playing',
                 playerId: playerId,
                 hand: hand,
@@ -1357,12 +1382,14 @@ async function doAIPlay(playerId) {
 
             // LLM returned a decision — dialogue was already shown in getLLMDecision
             llmDialogueShown = true;
+            finalDialogue = dialogue;
 
             if (decision === 'PASS') {
                 if (mustPlay) {
                     console.warn(`AI ${playerId} (Master) tried to PASS on mustPlay. Falling back to rule-based.`);
                     // llmDecisionValid stays false → will trigger rule-based fallback
                     llmDialogueShown = false;
+                    finalDialogue = "";
                 } else {
                     chosen = null; // Valid pass
                     llmDecisionValid = true; // LLM decision accepted, skip fallback
@@ -1376,15 +1403,19 @@ async function doAIPlay(playerId) {
                         llmDecisionValid = true;
                     } else {
                         console.warn(`AI ${playerId} (Master) returned illegal move:`, decision, "Falling back to rule-based.");
+                        llmDialogueShown = false;
+                        finalDialogue = "";
                     }
                 } else {
                     console.warn(`AI ${playerId} (Master) returned cards not in hand:`, decision, "Falling back to rule-based.");
                     llmDialogueShown = false;
+                    finalDialogue = "";
                 }
             }
         } catch (e) {
             console.error('LLM Playing Error, falling back to rule-based:', e);
             llmDialogueShown = false;
+            finalDialogue = "";
         }
     }
 
@@ -1404,18 +1435,18 @@ async function doAIPlay(playerId) {
     }
 
     if (!chosen) {
+        if (aiDialogueEnabled && !llmDialogueShown) {
+            const dialogue = generateLocalPlayingDialogue("pass", G.lastRealPlay, G.landlord === playerId, null, playerId);
+            if (dialogue) {
+                finalDialogue = dialogue;
+                await showAIDialogue(playerId, dialogue);
+            }
+        }
+
         // Pass
         G.passCount++;
         showLastPlay(playerId, [], true);
-        
-        // 出牌阶段：仅在LLM未提供对话时，40%概率触发本地对话（需开启语音开关）
-        if (aiDialogueEnabled && !llmDialogueShown && Math.random() < 0.4) {
-            const dialogue = generateLocalPlayingDialogue("pass", G.lastRealPlay, G.landlord === playerId, null, playerId);
-            if (dialogue) {
-                showAIDialogue(playerId, dialogue);
-            }
-        }
-        
+
         await sleep(1500);
         if (G.passCount >= 2) {
             G.lastRealPlay = null;
@@ -1428,7 +1459,8 @@ async function doAIPlay(playerId) {
             player: playerId,
             playerName: NAMES[playerId],
             cards: [],
-            pattern: { type: 'pass' }
+            pattern: { type: 'pass' },
+            dialogue: finalDialogue
         });
     } else {
         const pattern = detectPattern(chosen);
@@ -1444,6 +1476,14 @@ async function doAIPlay(playerId) {
             }
             return;
         }
+        if (aiDialogueEnabled && !llmDialogueShown) {
+            const dialogue = generateLocalPlayingDialogue("play", G.lastRealPlay, G.landlord === playerId, chosen, playerId);
+            if (dialogue) {
+                finalDialogue = dialogue;
+                await showAIDialogue(playerId, dialogue);
+            }
+        }
+
         G.passCount = 0;
         G.lastRealPlay = { cards: chosen, pattern, player: playerId };
         removeCardsFromHand(playerId, chosen);
@@ -1459,20 +1499,13 @@ async function doAIPlay(playerId) {
         showLastPlay(playerId, chosen, false);
         renderAIHand(playerId, hand.length);
 
-        // 出牌阶段：仅在LLM未提供对话时，40%概率触发本地对话（需开启语音开关）
-        if (aiDialogueEnabled && !llmDialogueShown && Math.random() < 0.4) {
-            const dialogue = generateLocalPlayingDialogue("play", G.lastRealPlay, G.landlord === playerId, chosen, playerId);
-            if (dialogue) {
-                showAIDialogue(playerId, dialogue);
-            }
-        }
-
         // Record for LLM history
         G.pastRounds.push({
             player: playerId,
             playerName: NAMES[playerId],
             cards: [...chosen],
-            pattern: pattern
+            pattern: pattern,
+            dialogue: finalDialogue
         });
     }
 }
@@ -1727,8 +1760,35 @@ window.addEventListener('load', () => {
     updateScoreUI();
     $('myScore').textContent = '0';
 
+    // 同步玩家名称显示
+    $('label-player').textContent = NAMES[PLAYER];
+    $('label-ai1').textContent = NAMES[AI1];
+    $('label-ai2').textContent = NAMES[AI2];
+
+    updateAvatars();
+
     // 加载语音映射
     loadVoiceMapping();
+
+    // 初始化音量
+    doudizhuBgm.volume = G.bgmVolume;
+
+    // 绑定音量调节事件
+    const bgmSlider = $('bgmVolumeSlider');
+    if (bgmSlider) {
+        bgmSlider.value = G.bgmVolume;
+        bgmSlider.oninput = (e) => {
+            G.bgmVolume = parseFloat(e.target.value);
+            doudizhuBgm.volume = G.bgmVolume;
+        };
+    }
+    const voiceSlider = $('voiceVolumeSlider');
+    if (voiceSlider) {
+        voiceSlider.value = G.voiceVolume;
+        voiceSlider.oninput = (e) => {
+            G.voiceVolume = parseFloat(e.target.value);
+        };
+    }
 
     // Attempt Auto-play BGM
     doudizhuBgm.play().then(() => {

@@ -36,41 +36,55 @@ app.add_middleware(
 #  DIALOGUE GENERATION (per-player voice mapping aware)
 # ========================
 
-# AI1 (playerId=1) dialogue pools — must match frontend VOICE_MAPPING_AI1 keys
+# AI1 (playerId=1) - 云希: 豪迈侠客
 BIDDING_LINES_AI1 = {
-    0: ["不叫", "先观望一下", "手牌不太行", "我就看看", "让你们来吧"],
+    0: ["不叫", "先观望一下", "牌太臭了，不要", "低调点，过"],
     1: ["试试看", "叫一分", "我来试试"],
     2: ["好牌必须叫", "两分", "这手牌不错"],
-    3: ["三分到底", "必胜之局", "这把稳了"],
+    3: ["三分到底", "地主我当定了", "不装了，我全要"],
 }
 
 PLAYING_LINES_AI1 = {
-    "pass":      ["不要", "不出", "跟不起", "让你过", "先等等", "等等看"],
-    "bomb":      ["哈哈炸弹", "炸弹来了", "爆炸"],
-    "rocket":    ["王炸", "双王出击", "无敌了"],
-    "straight":  ["顺子走起", "连牌漂亮", "长牌压制"],
-    "bigCard":   ["大牌压制", "压你一手", "2来了"],
-    "smallCard": ["出张小牌", "先出个小的", "试探一下"],
-    "normal":    ["跟上", "出牌", "来了", "接着"],
+    "pass":      ["不要", "不出", "跟不起", "让你过"],
+    "bomb":      ["哈哈炸弹", "炸弹来了", "见识下火力的厉害"],
+    "rocket":    ["王炸", "无敌了", "炸得你怀疑人生"],
+    "straight":  ["顺子走起", "一条龙送给你", "顺风顺水"],
+    "bigCard":   ["大牌压制", "压你一手", "顶级单张"],
+    "smallCard": ["出张小牌", "先出个小的", "抛砖引玉"],
+    "normal":    ["跟上", "出牌", "来了", "看招"],
 }
 
-# AI2 (playerId=2) dialogue pools — must match frontend VOICE_MAPPING_AI2 keys
+# AI2 (playerId=2) - 晓伊: 聪慧俏皮
 BIDDING_LINES_AI2 = {
-    0: ["你们来吧", "这手牌一般", "你们争吧"],
-    1: ["试试看", "我来试试"],
-    2: ["这手牌不错"],
-    3: ["这把稳了"],
+    0: ["你们来吧", "牌散得像沙子", "我就看看风景"],
+    1: ["试试看", "一分吧", "看在运气的份上"],
+    2: ["这手牌不错", "感觉能打，两分"],
+    3: ["这把稳了", "地主是我的", "三分全满"],
 }
 
 PLAYING_LINES_AI2 = {
-    "pass":      ["不要"],
-    "bomb":      ["炸弹"],
-    "rocket":    ["王炸", "双王出击"],
-    "straight":  [],  # AI2 has no straight voice files
-    "bigCard":   ["压你一手", "压死"],
-    "smallCard": ["出张小牌", "小牌开路"],
-    "normal":    [],  # AI2 has no normal voice files
+    "pass":      ["不要", "过", "稳住别浪"],
+    "bomb":      ["炸弹", "轰你一下", "这手牌够硬吧"],
+    "rocket":    ["王炸", "直接送走", "这个最高级"],
+    "straight":  ["顺子送上", "长龙过境", "一顺到底"],
+    "bigCard":   ["压你一手", "压死", "别想溜"],
+    "smallCard": ["出张小牌", "轻轻放一张", "从小打起"],
+    "normal":    ["跟上", "过一张", "轮到我了"],
 }
+
+# AI_CHARACTERS: Define personality based on (playerId, is_landlord)
+def get_character_prompt(player_id, is_landlord):
+    if player_id == 1: # 云希
+        if is_landlord:
+            return "你叫云希，现在你是地主。你变得极其狂妄、自大，认为自己天下无敌。你的台词应该充满嘲讽、傲慢，视农民如无物，带有强烈的压迫感。"
+        else:
+            return "你叫云希，现在你是农民。你是一位英俊豪爽、自信直率的古风侠客。你的台词应该豪迈、果断，带点侠气，并表达出与队友（另一个农民）并肩作战的决心。"
+    elif player_id == 2: # 晓伊
+        if is_landlord:
+            return "你叫晓伊，现在你是地主。你变得腹黑、高傲、优雅地嘲讽。你视对手为股掌间的玩物，台词应该带着一种掌控全局的冷淡感，以及对他人的轻蔑。"
+        else:
+            return "你叫晓伊，现在你是农民。你是一位温婉聪慧、睿智从容的古风少女，性格里带着一丝灵动和俏皮。台词应该优雅且充满智谋，偶尔开个小玩笑，与队友共商破敌之策。"
+    return "你是一个专业的斗地主玩家"
 
 
 def generate_bidding_dialogue(bid, max_bid, hand, player_id=1):
@@ -128,7 +142,6 @@ TTS_VOICES = {
 async def text_to_speech_base64(text: str, player_id: int = 1) -> str:
     """
     Convert text to speech using Edge TTS, return base64-encoded mp3.
-    Returns empty string if TTS fails.
     """
     if not text or not text.strip():
         return ""
@@ -178,12 +191,13 @@ async def health_check():
 class AIRequest(BaseModel):
     phase: str
     playerId: int
-    hand: List[Any]
-    maxBid: Optional[int] = None
-    landlordId: Optional[int] = None
-    mustPlay: Optional[bool] = None
-    lastRealPlay: Optional[Any] = None
-    pastRounds: Optional[List[Any]] = []
+    hand: List[dict]
+    maxBid: Optional[int] = 0
+    landlordId: Optional[int] = -1
+    mustPlay: Optional[bool] = False
+    lastRealPlay: Optional[dict] = None
+    pastRounds: Optional[List[dict]] = []
+
 
 
 @app.post("/api/ai-play")
@@ -202,7 +216,10 @@ async def get_ai_decision(request: AIRequest):
             else:
                 valid_bids = [0] + list(range(min_valid_bid, max_valid_bid + 1))
             
-            prompt = f"""你是一个专业的斗地主玩家，性格鲜明，喜欢在牌桌上说些有趣的话。
+            character_desc = get_character_prompt(request.playerId, False)
+            
+            prompt = f"""{character_desc}
+你正在参加一场古风背景的斗地主比赛。
 
 当前阶段：叫地主
 你的手牌：{json.dumps(request.hand, ensure_ascii=False)}
@@ -232,85 +249,65 @@ async def get_ai_decision(request: AIRequest):
                 response_format={"type": "json_object"}
             )
             content = response.choices[0].message.content
-            # try parsing
             resp_json = json.loads(content)
             bid = resp_json.get("bid", 0)
             print(f"DeepSeek 调用成功 (Bidding): Player {request.playerId} 叫分: {bid}", flush=True)
             
-            # 验证叫分是否合法
             if bid not in valid_bids:
-                print(f"AI返回了无效叫分: {bid}, 有效范围: {valid_bids}")
-                # 使用保守策略：如果AI叫分无效，默认不叫
                 bid = 0
             
-            # Use LLM-generated dialogue for master mode
             dialogue = resp_json.get("dialogue", "")
             if not dialogue:
-                # Fallback to preset if LLM didn't generate one
                 dialogue = generate_bidding_dialogue(bid, request.maxBid, request.hand, player_id=request.playerId)
             
-            # Generate TTS audio from dialogue
             audio_base64 = await text_to_speech_base64(dialogue, request.playerId)
-            
             return {"decision": bid, "dialogue": dialogue, "audio_base64": audio_base64}
 
         # Phase 2: Playing
         elif request.phase == "playing":
-            # Determine roles
             is_landlord = (request.playerId == request.landlordId)
             role_text = "地主" if is_landlord else "农民"
             
-            # Identify relationship with the person who played the last card
             last_player_is_teammate = False
             if not is_landlord and request.lastRealPlay:
                 lp_id = request.lastRealPlay.get("player")
-                # Teammate is the other farmer (not landlord and not self)
                 if lp_id is not None and lp_id != request.landlordId and lp_id != request.playerId:
                     last_player_is_teammate = True
             
             teammate_caution = ""
             if last_player_is_teammate:
-                teammate_caution = "\n特别注意：上家出的牌是你的队友（另一个农民）出的。为了配合队友，除非你认为出的牌能显著增加赢面（例如你能直接接管牌局并很快出完），否则通常建议选择“不要”（pass）。"
+                teammate_caution = "\n特别注意：上家出的牌是你的队友（另一个农民）出的。为了配合队友，除非你认为出的牌能显著增加赢面，否则通常建议选择“不要”（pass）。"
             
             landlord_role_desc = "你是地主，独自对抗两个农民。" if is_landlord else f"你是农民，与另一个农民配合对抗玩家 {request.landlordId}（地主）。"
             
             must_play_warning = ""
-            must_play_text = "是" if request.mustPlay else "否"
             if request.mustPlay:
-                must_play_warning = "\n⚠️ 重要：当前大家都没有压过上一轮的牌，现在由你首出。你必须选择出牌，绝对不能选择“不要”（pass）。"
+                must_play_warning = "\n⚠️ 绝对指令：当前你获得了出牌权。你必须从手牌中选择牌打出，严禁选择“不要”（pass）。"
 
             last_play_text = json.dumps(request.lastRealPlay, ensure_ascii=False) if request.lastRealPlay else "无（你是首出）"
+            character_desc = get_character_prompt(request.playerId, is_landlord)
 
-            prompt = f"""你是一个专业的斗地主玩家。
+            prompt = f"""{character_desc}
+你正在参加一场古风背景的斗地主比赛。
 你的角色：{role_text}
 {landlord_role_desc}
 
 当前阶段：出牌
 你的手牌：{json.dumps(request.hand, ensure_ascii=False)}
-是否必须出牌：{must_play_text}{must_play_warning}
+是否必须出牌：{"是" if request.mustPlay else "否"}{must_play_warning}
 需要压过的牌型：{last_play_text}{teammate_caution}
-历史出牌记录：{json.dumps(request.pastRounds, ensure_ascii=False)}
+历史出牌及台词记录：{json.dumps(request.pastRounds, ensure_ascii=False)}
 
 出牌规则：
-- 当“是否必须出牌”为“是”时：你获得了出牌权，必须从手牌中出一个合法牌型。此时返回格式必须是 {{"action": "play", "cards": [...]}}。
-- 当“是否必须出牌”为“否”时：你可以出比上家更大的牌，或者选择 {{"action": "pass"}}。
-
-出牌策略建议：
-- 必须出牌时：通常出最小的牌型，保存强牌到后面
-- 跟牌时：如果上家是地主，你应该尽量压制；如果上家是队友，除非你要接牌权，否则建议放行。
-- 如果需要用强牌（如2、王、炸弹）才能跟牌，且出完后无法接管局势，建议"不要"
-- 手牌越少，求胜欲望应越强。
+- 当“是否必须出牌”为“是”时：你获得了出牌权，必须从手牌中出一个合法牌型。格式：{{"action": "play", "cards": [...]}}。
+- 当“是否必须出牌”为“否”时：可以压牌，或者选择 {{"action": "pass"}}。
 
 请分析局势并做出最佳决策，必须返回以下JSON格式之一：
 - 不要：{{"action": "pass", "dialogue": "一句简短台词"}}
-- 出牌：{{"action": "play", "cards": [从你手牌中选择的确切卡牌对象数组], "dialogue": "一句简短台词"}}
-
-其中dialogue是你作为牌手说的一句简短台词（10个字以内，用中文），表达你此刻的心情或对出牌的评价。要有个性，可以嘲讽、自信、犹豫、兴奋等。
-
-注意：cards数组中的每个卡牌对象必须完全来自你的手牌数组，包括suit、rank、value等所有字段。
+- 出牌：{{"action": "play", "cards": [选择的确切卡牌对象数组], "dialogue": "一句简短台词"}}
 """
 
-            print(f"DeepSeek 正在调用 (Playing)...", flush=True)
+            print(f"DeepSeek 正在调用 (Playing, mustPlay={request.mustPlay})...", flush=True)
             response = await client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}],
@@ -319,36 +316,34 @@ async def get_ai_decision(request: AIRequest):
             content = response.choices[0].message.content
             resp_json = json.loads(content)
             
-            if resp_json.get("action", "").lower() == "pass":
-                # Safety check: if AI insisted on passing but mustPlay is true, trigger fallback
+            action = resp_json.get("action", "").lower()
+            dialogue = resp_json.get("dialogue", "")
+
+            if action == "pass":
                 if request.mustPlay:
-                    print(f"Warning: AI {request.playerId} tried to PASS when mustPlay=True. Triggering FAILBACK.", flush=True)
+                    print(f"Warning: AI {request.playerId} tried to PASS on mustPlay. TRIGGER FALLBACK.", flush=True)
                     return {"decision": "FALLBACK"}
-                print(f"DeepSeek 调用成功 (Playing): Player {request.playerId} (AI) 选择了: 不要 (Pass)", flush=True)
-                dialogue = resp_json.get("dialogue", "")
-                if not dialogue:
-                    dialogue = generate_playing_dialogue("pass", request.lastRealPlay, request.landlordId == request.playerId, player_id=request.playerId)
                 audio_base64 = await text_to_speech_base64(dialogue, request.playerId)
                 return {"decision": "PASS", "dialogue": dialogue, "audio_base64": audio_base64}
-            elif resp_json.get("action", "").lower() == "play" and "cards" in resp_json:
-                print(f"DeepSeek 调用成功 (Playing): Player {request.playerId} (AI) 打出了牌: {resp_json['cards']}", flush=True)
-                dialogue = resp_json.get("dialogue", "")
-                if not dialogue:
-                    dialogue = generate_playing_dialogue("play", request.lastRealPlay, request.landlordId == request.playerId, resp_json["cards"], player_id=request.playerId)
+            elif action == "play" and "cards" in resp_json:
                 audio_base64 = await text_to_speech_base64(dialogue, request.playerId)
                 return {"decision": resp_json["cards"], "dialogue": dialogue, "audio_base64": audio_base64}
             else:
-                print(f"AI决策格式异常: {resp_json}", flush=True)
-                dialogue = generate_playing_dialogue("pass", request.lastRealPlay, request.landlordId == request.playerId, player_id=request.playerId)
-                audio_base64 = await text_to_speech_base64(dialogue, request.playerId)
-                return {"decision": "PASS", "dialogue": dialogue, "audio_base64": audio_base64}
+                return {"decision": "FALLBACK"}
 
     except Exception as e:
         print("Error calling DeepSeek API:", e)
-        # Return HTTP 500 equivalent message or fallback instruction
         return {"error": str(e), "decision": "FALLBACK", "dialogue": ""}
+
+class TTSRequest(BaseModel):
+    text: str
+    playerId: int
+
+@app.post("/api/tts")
+async def get_tts(request: TTSRequest):
+    audio_base64 = await text_to_speech_base64(request.text, request.playerId)
+    return {"audio_base64": audio_base64}
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=5000)
-    

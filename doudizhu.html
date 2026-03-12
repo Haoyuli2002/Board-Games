@@ -18,6 +18,20 @@
     <div class="table-bg"></div>
     <div class="vignette"></div>
 
+    <!-- 音量控制 (左侧挂架) -->
+    <div class="volume-controls" id="volumeControls">
+        <div class="volume-item">
+            <span class="volume-icon" title="背景音乐">🎵</span>
+            <input type="range" id="bgmVolumeSlider" min="0" max="1" step="0.01" value="0.5" class="volume-slider"
+                orient="vertical">
+        </div>
+        <div class="volume-item">
+            <span class="volume-icon" title="AI语音">🗣️</span>
+            <input type="range" id="voiceVolumeSlider" min="0" max="1" step="0.01" value="0.8" class="volume-slider"
+                orient="vertical">
+        </div>
+    </div>
+
     <!-- 导航栏 -->
     <div class="nav-bar">
         <button class="btn-back" onclick="goLobby()" aria-label="返回大厅">← 大厅</button>
@@ -40,7 +54,7 @@
                 <line x1="12" y1="19" x2="12" y2="23"></line>
                 <line x1="8" y1="23" x2="16" y2="23"></line>
             </svg>
-            <span id="aiDialogueLabel">AI交互 OFF</span>
+            <span id="aiDialogueLabel" style="color: rgb(74, 222, 128);">AI交互 ON</span>
         </button>
         <select class="ai-mode-select" id="aiModeSelect" onchange="setAiMode(this.value)" aria-label="切换AI难度">
             <option value="normal">普通 AI</option>
@@ -48,6 +62,7 @@
         </select>
         <button class="btn-restart" id="btnRestart" onclick="restartGame()">重新开始</button>
         <button class="btn-pause" id="btnPause" onclick="togglePause()" aria-label="暂停游戏">暂停</button>
+        <button class="btn-end" onclick="exitGame()">结束游戏</button>
     </div>
 
     <!-- 规则按钮 -->
@@ -70,8 +85,8 @@
         <!-- 顶部：AI玩家2（上家） -->
         <section class="player-zone zone-top" id="zone-ai2">
             <div class="player-avatar ai-avatar">
-                <img class="avatar-icon avatar-img" id="avatar-ai2" src="assets/farmer_avatar.png" alt="上家" />
-                <span class="player-label" id="label-ai2">上家</span>
+                <img class="avatar-icon avatar-img" id="avatar-ai2" src="assets/farmer_avatar.png" alt="晓伊" />
+                <span class="player-label" id="label-ai2">晓伊</span>
                 <div class="role-badge" id="role-ai2"></div>
                 <div class="bid-badge" id="bid-ai2"></div>
             </div>
@@ -123,8 +138,8 @@
                 </div>
                 <div class="ai-hand vertical" id="hand-ai1"></div>
                 <div class="player-avatar ai-avatar">
-                    <img class="avatar-icon avatar-img" id="avatar-ai1" src="assets/farmer_avatar.png" alt="右家" />
-                    <span class="player-label" id="label-ai1">右家</span>
+                    <img class="avatar-icon avatar-img" id="avatar-ai1" src="assets/farmer_avatar.png" alt="云希" />
+                    <span class="player-label" id="label-ai1">云希</span>
                     <div class="role-badge" id="role-ai1"></div>
                     <div class="bid-badge" id="bid-ai1"></div>
                 </div>

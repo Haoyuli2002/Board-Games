@@ -31,9 +31,6 @@ body {
     overflow: hidden;
 }
 
-/* ========================
-   BACKGROUND
-   ======================== */
 .table-bg {
     position: fixed;
     inset: 0;
@@ -59,13 +56,17 @@ body {
     position: fixed;
     top: 16px;
     left: 16px;
-    z-index: 200;
+    z-index: 10000;
+    /* Ensure it's above brightness overlay */
     display: flex;
+    align-items: center;
     gap: 12px;
 }
 
+
 .btn-back,
-.btn-pause {
+.btn-pause,
+.btn-restart {
     background: rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(201, 168, 76, 0.4);
     color: var(--gold);
@@ -80,7 +81,8 @@ body {
 }
 
 .btn-back:hover,
-.btn-pause:hover {
+.btn-pause:hover,
+.btn-restart:hover {
     background: rgba(201, 168, 76, 0.15);
 }
 
@@ -107,6 +109,7 @@ body {
     letter-spacing: 1px;
     appearance: none;
     -webkit-appearance: none;
+    -moz-appearance: none;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C9A84C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat;
     background-position: right 14px center;

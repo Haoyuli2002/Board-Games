@@ -57,6 +57,7 @@ class AIRequest(BaseModel):
 
 @app.post("/api/ai-play")
 async def get_ai_decision(request: AIRequest):
+    print(f"\n[Backend] 收到 AI 请求: Player {request.playerId}, Phase: {request.phase}, Mode: Master", flush=True)
     try:
         # Phase 1: Bidding
         if request.phase == "bidding":
@@ -93,6 +94,7 @@ async def get_ai_decision(request: AIRequest):
 {{"bid": {valid_bids}中的一个数字}}
 """
             
+            print(f"DeepSeek 正在调用 (Bidding)...", flush=True)
             response = await client.chat.completions.create(
                 model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}],
@@ -102,6 +104,7 @@ async def get_ai_decision(request: AIRequest):
             # try parsing
             resp_json = json.loads(content)
             bid = resp_json.get("bid", 0)
+            print(f"DeepSeek 调用成功 (Bidding): Player {request.playerId} 叫分: {bid}", flush=True)
             
             # 验证叫分是否合法
             if bid not in valid_bids:
@@ -112,6 +115,7 @@ async def get_ai_decision(request: AIRequest):
             return {"decision": bid}
 
         # Phase 2: Playing
+        elif request.phase == "playing":
             # Determine roles
             is_landlord = (request.playerId == request.landlordId)
             role_text = "地主" if is_landlord else "农民"
@@ -128,11 +132,14 @@ async def get_ai_decision(request: AIRequest):
             if last_player_is_teammate:
                 teammate_caution = "\n特别注意：上家出的牌是你的队友（另一个农民）出的。为了配合队友，除非你认为出的牌能显著增加赢面（例如你能直接接管牌局并很快出完），否则通常建议选择“不要”（pass）。"
             
-            landlord_role_desc = "你是地主，独自对抗两个农民。" if is_landlord else f"你是农民，与另一个农民配合对抗玩家{request.landlordId}（地主）。"
+            landlord_role_desc = "你是地主，独自对抗两个农民。" if is_landlord else f"你是农民，与另一个农民配合对抗玩家 {request.landlordId}（地主）。"
             
             must_play_warning = ""
+            must_play_text = "是" if request.mustPlay else "否"
             if request.mustPlay:
                 must_play_warning = "\n⚠️ 重要：当前大家都没有压过上一轮的牌，现在由你首出。你必须选择出牌，绝对不能选择“不要”（pass）。"
+
+            last_play_text = json.dumps(request.lastRealPlay, ensure_ascii=False) if request.lastRealPlay else "无（你是首出）"
 
             prompt = f"""你是一个专业的斗地主玩家。
 你的角色：{role_text}
@@ -161,8 +168,9 @@ async def get_ai_decision(request: AIRequest):
 注意：cards数组中的每个卡牌对象必须完全来自你的手牌数组，包括suit、rank、value等所有字段。
 """
 
+            print(f"DeepSeek 正在调用 (Playing)...", flush=True)
             response = await client.chat.completions.create(
-                model="deepseek-chat", # DeepSeek standard model
+                model="deepseek-chat",
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"}
             )
@@ -172,13 +180,16 @@ async def get_ai_decision(request: AIRequest):
             if resp_json.get("action", "").lower() == "pass":
                 # Safety check: if AI insisted on passing but mustPlay is true, trigger fallback
                 if request.mustPlay:
-                    print(f"Warning: AI {request.playerId} tried to PASS when mustPlay=True. Triggering FAILBACK.")
+                    print(f"Warning: AI {request.playerId} tried to PASS when mustPlay=True. Triggering FAILBACK.", flush=True)
                     return {"decision": "FALLBACK"}
+                print(f"DeepSeek 调用成功 (Playing): Player {request.playerId} (AI) 选择了: 不要 (Pass)", flush=True)
                 return {"decision": "PASS"}
             elif resp_json.get("action", "").lower() == "play" and "cards" in resp_json:
+                print(f"DeepSeek 调用成功 (Playing): Player {request.playerId} (AI) 打出了牌: {resp_json['cards']}", flush=True)
                 return {"decision": resp_json["cards"]}
             else:
-                return {"decision": "PASS"} # Fallback
+                print(f"AI决策格式异常: {resp_json}", flush=True)
+                return {"decision": "PASS"}
 
     except Exception as e:
         print("Error calling DeepSeek API:", e)

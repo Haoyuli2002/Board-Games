@@ -216,6 +216,7 @@ const sfx = {
     chip: new Audio('assets/sounds/音效/下注.mp3'),
     win: new Audio('assets/sounds/音效/胜利.mp3'),
     lose: new Audio('assets/sounds/音效/爆牌.mp3'),
+    bomb: new Audio('assets/bomb.mp3'),
 };
 
 // BGM
@@ -244,6 +245,30 @@ function playSound(type) {
         c.volume = 0.6;
         c.play().catch(() => { });
     } catch (e) { }
+}
+
+// Initialize on load
+window.addEventListener('DOMContentLoaded', () => {
+    // No-op
+});
+
+/**
+ * Restart the game immediately
+ */
+function restartGame() {
+    if (confirm('确定要重新开始当前对局吗？')) {
+        // Clear all visuals
+        clearAllLastPlays();
+        $('resultOverlay').style.display = 'none';
+
+        // Re-enable AI mode selection just in case
+        const modeSelect = $('aiModeSelect');
+        if (modeSelect) modeSelect.disabled = false;
+
+        // Reset scores if you want a clean slate, or keep them? 
+        // Typically "Restart" means reset current game board, so let's just trigger startGame
+        startGame();
+    }
 }
 
 // ========================
@@ -295,6 +320,13 @@ function goLobby() {
  * Switch AI mode between 'normal' and 'master'
  */
 function setAiMode(mode) {
+    if (G.phase !== 'idle' && G.phase !== 'result') {
+        console.warn('Cannot switch AI mode during a game.');
+        // Revert UI to match current G.aiMode
+        const select = $('aiModeSelect');
+        if (select) select.value = G.aiMode;
+        return;
+    }
     G.aiMode = mode;
     console.log(`AI Mode switched to: ${mode}`);
 }
@@ -540,6 +572,10 @@ async function startGame() {
         aiMode: G.aiMode || 'normal',
         pastRounds: []
     };
+
+    // Disable AI mode selection
+    const modeSelect = $('aiModeSelect');
+    if (modeSelect) modeSelect.disabled = true;
 
     // Reset labels
     [0, 1, 2].forEach(i => {
@@ -842,7 +878,7 @@ async function playerPlay() {
     if (pattern.type === 'bomb' || pattern.type === 'rocket') {
         G.multiplier *= 2;
         updateScoreUI();
-        playSound('chip');
+        playSound('bomb');
     } else {
         playSound('deal');
     }
@@ -946,11 +982,17 @@ async function doAIPlay(playerId) {
                 } else {
                     chosen = null;
                 }
-            } else if (Array.isArray(decision)) {
                 // Validate if cards are in hand and get actual card objects with .value
                 const validCards = decision.map(c => hand.find(h => h.rank === c.rank && h.suit === c.suit)).filter(Boolean);
                 if (validCards.length === decision.length) {
-                    chosen = validCards;
+                    // CRITICAL FIX: Validate that the LLM move actually follows game rules
+                    const pattern = detectPattern(validCards);
+                    if (pattern && (mustPlay || canBeat(pattern, G.lastRealPlay.pattern))) {
+                        chosen = validCards;
+                    } else {
+                        console.warn(`AI ${playerId} (Master) returned illegal move:`, decision, "Falling back to rule-based.");
+                        chosen = null; // Trigger fallback
+                    }
                 }
             }
         } catch (e) {
@@ -1012,7 +1054,7 @@ async function doAIPlay(playerId) {
         if (pattern.type === 'bomb' || pattern.type === 'rocket') {
             G.multiplier *= 2;
             updateScoreUI();
-            playSound('chip');
+            playSound('bomb');
         } else {
             playSound('deal');
         }
@@ -1264,6 +1306,10 @@ async function endGame(winner) {
     $('resultScore').style.color = scoreDelta > 0 ? '#4ade80' : '#f87171';
     $('resultTotal').lastChild && ($('resultTotal').innerHTML = `<span>累计积分</span><span>${G.totalScore}</span>`);
     $('resultOverlay').style.display = 'flex';
+
+    // Re-enable AI mode selection
+    const modeSelect = $('aiModeSelect');
+    if (modeSelect) modeSelect.disabled = false;
 }
 
 // ========================

@@ -49,6 +49,7 @@ class AIRequest(BaseModel):
     playerId: int
     hand: List[Any]
     maxBid: Optional[int] = None
+    landlordId: Optional[int] = None
     mustPlay: Optional[bool] = None
     lastRealPlay: Optional[Any] = None
     pastRounds: Optional[List[Any]] = []
@@ -111,27 +112,47 @@ async def get_ai_decision(request: AIRequest):
             return {"decision": bid}
 
         # Phase 2: Playing
-        elif request.phase == "playing":
-            must_play_text = "是" if request.mustPlay else "否"
-            last_play_text = json.dumps(request.lastRealPlay, ensure_ascii=False) if request.lastRealPlay else "无（你是首出）"
+            # Determine roles
+            is_landlord = (request.playerId == request.landlordId)
+            role_text = "地主" if is_landlord else "农民"
             
+            # Identify relationship with the person who played the last card
+            last_player_is_teammate = False
+            if not is_landlord and request.lastRealPlay:
+                lp_id = request.lastRealPlay.get("player")
+                # Teammate is the other farmer (not landlord and not self)
+                if lp_id is not None and lp_id != request.landlordId and lp_id != request.playerId:
+                    last_player_is_teammate = True
+            
+            teammate_caution = ""
+            if last_player_is_teammate:
+                teammate_caution = "\n特别注意：上家出的牌是你的队友（另一个农民）出的。为了配合队友，除非你认为出的牌能显著增加赢面（例如你能直接接管牌局并很快出完），否则通常建议选择“不要”（pass）。"
+            
+            landlord_role_desc = "你是地主，独自对抗两个农民。" if is_landlord else f"你是农民，与另一个农民配合对抗玩家{request.landlordId}（地主）。"
+            
+            must_play_warning = ""
+            if request.mustPlay:
+                must_play_warning = "\n⚠️ 重要：当前大家都没有压过上一轮的牌，现在由你首出。你必须选择出牌，绝对不能选择“不要”（pass）。"
+
             prompt = f"""你是一个专业的斗地主玩家。
+你的角色：{role_text}
+{landlord_role_desc}
 
 当前阶段：出牌
 你的手牌：{json.dumps(request.hand, ensure_ascii=False)}
-是否必须出牌：{must_play_text}
-需要压过的牌型：{last_play_text}
+是否必须出牌：{must_play_text}{must_play_warning}
+需要压过的牌型：{last_play_text}{teammate_caution}
 历史出牌记录：{json.dumps(request.pastRounds, ensure_ascii=False)}
 
 出牌规则：
-- 如果必须出牌：你获得了出牌权，必须从手牌中出一个合法牌型
-- 如果不必须出牌：你需要出比上家更大的同类型牌型，或者选择"不要"（pass）
+- 当“是否必须出牌”为“是”时：你获得了出牌权，必须从手牌中出一个合法牌型。此时返回格式必须是 {{"action": "play", "cards": [...]}}。
+- 当“是否必须出牌”为“否”时：你可以出比上家更大的牌，或者选择 {{"action": "pass"}}。
 
 出牌策略建议：
 - 必须出牌时：通常出最小的牌型，保存强牌到后面
-- 跟牌时：如果能轻松压过且不浪费强牌，可以跟牌
-- 如果需要用强牌（如2、王、炸弹）才能跟牌，建议"不要"
-- 手牌较少时（5张以下），应该更积极出牌
+- 跟牌时：如果上家是地主，你应该尽量压制；如果上家是队友，除非你要接牌权，否则建议放行。
+- 如果需要用强牌（如2、王、炸弹）才能跟牌，且出完后无法接管局势，建议"不要"
+- 手牌越少，求胜欲望应越强。
 
 请分析局势并做出最佳决策，必须返回以下JSON格式之一：
 - 不要：{{"action": "pass"}}
@@ -149,6 +170,10 @@ async def get_ai_decision(request: AIRequest):
             resp_json = json.loads(content)
             
             if resp_json.get("action", "").lower() == "pass":
+                # Safety check: if AI insisted on passing but mustPlay is true, trigger fallback
+                if request.mustPlay:
+                    print(f"Warning: AI {request.playerId} tried to PASS when mustPlay=True. Triggering FAILBACK.")
+                    return {"decision": "FALLBACK"}
                 return {"decision": "PASS"}
             elif resp_json.get("action", "").lower() == "play" and "cards" in resp_json:
                 return {"decision": resp_json["cards"]}

@@ -655,7 +655,8 @@ async function aiBid(playerId) {
                 phase: 'bidding',
                 playerId: playerId,
                 hand: G.hands[playerId],
-                maxBid: G.maxBid
+                maxBid: G.maxBid,
+                landlordId: G.landlord
             });
             if (typeof decision === 'number' && decision >= 0 && decision <= 3) {
                 return decision;
@@ -873,6 +874,8 @@ async function playerPass() {
     showLastPlay(PLAYER, [], true);
     $('playArea').style.display = 'none';
 
+    await sleep(1000);
+
     // Record for LLM history
     G.pastRounds.push({
         player: PLAYER,
@@ -931,10 +934,18 @@ async function doAIPlay(playerId) {
                 hand: hand,
                 mustPlay: mustPlay,
                 lastRealPlay: G.lastRealPlay,
+                landlordId: G.landlord,
                 pastRounds: G.pastRounds
             });
+
+            // Enforce mandatory play: if LLM says PASS but it's its turn to lead, ignore LLM
             if (decision === 'PASS') {
-                chosen = null;
+                if (mustPlay) {
+                    console.warn(`AI ${playerId} (Master) tried to PASS on mustPlay. Falling back to rule-based.`);
+                    chosen = null; // Fall through to rule-based
+                } else {
+                    chosen = null;
+                }
             } else if (Array.isArray(decision)) {
                 // Validate if cards are in hand and get actual card objects with .value
                 const validCards = decision.map(c => hand.find(h => h.rank === c.rank && h.suit === c.suit)).filter(Boolean);
@@ -947,12 +958,12 @@ async function doAIPlay(playerId) {
         }
     }
 
-    // Rule-based fallback (if LLM failed or in normal mode)
+    // Rule-based fallback (if LLM failed, returned invalid cards, or incorrectly PASSed on mustPlay)
     if (G.aiMode === 'normal' || !chosen) {
         if (mustPlay) {
             chosen = aiFindBestPlay(hand);
         } else {
-            chosen = findBestPlay(hand, G.lastRealPlay.pattern);
+            chosen = findBestPlay(hand, G.lastRealPlay ? G.lastRealPlay.pattern : null);
         }
     }
 
@@ -966,6 +977,7 @@ async function doAIPlay(playerId) {
         // Pass
         G.passCount++;
         showLastPlay(playerId, [], true);
+        await sleep(1000);
         if (G.passCount >= 2) {
             G.lastRealPlay = null;
             G.passCount = 0;
@@ -985,6 +997,7 @@ async function doAIPlay(playerId) {
             // 检测到非法牌型，强制跳过
             G.passCount++;
             showLastPlay(playerId, [], true);
+            await sleep(1000);
             if (G.passCount >= 2) {
                 G.lastRealPlay = null;
                 G.passCount = 0;

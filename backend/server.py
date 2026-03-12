@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Any
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
+import random
 
 # Load environment variables
 load_dotenv()
@@ -28,10 +29,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ========================
+#  DIALOGUE GENERATION
+# ========================
+
+def generate_bidding_dialogue(bid, max_bid, hand):
+    """Generate dialogue for bidding phase"""
+    if bid == 0:
+        if max_bid >= 2:
+            return random.choice(["让你们来吧", "我就看看", "这手牌一般般"])
+        else:
+            return random.choice(["不叫", "手牌不太行", "先观望一下"])
+    elif bid == 1:
+        return random.choice(["试试看", "叫一分", "我来试试"])
+    elif bid == 2:
+        return random.choice(["好牌必须叫", "两分！", "这手牌不错"])
+    elif bid == 3:
+        return random.choice(["三分到底！", "必胜之局", "这把稳了"])
+    return ""
+
+def generate_playing_dialogue(action, last_real_play, is_landlord, played_cards=None):
+    """Generate dialogue for playing phase"""
+    if action == "pass":
+        if last_real_play:
+            return random.choice(["不要", "跟不起", "让你过", "先等等"])
+        else:
+            return random.choice(["不出", "pass", "等等看"])
+    elif action == "play" and played_cards:
+        card_count = len(played_cards)
+        
+        # Detect if it's a special play
+        if card_count == 4:  # Possible bomb
+            return random.choice(["炸弹来了！", "爆炸！", "哈哈炸弹"])
+        elif card_count == 2 and any(c.get('rank') in ['小王', '大王'] for c in played_cards):  # Rocket
+            return random.choice(["王炸！", "双王出击！", "无敌了"])
+        elif card_count >= 5:  # Long sequence
+            return random.choice(["长牌压制", "顺子走起", "连牌漂亮"])
+        elif card_count == 1:
+            if played_cards[0].get('value', 0) >= 15:  # 2 or joker
+                return random.choice(["大牌压制", "2来了", "压你一手"])
+            else:
+                return random.choice(["出张小牌", "试探一下", "先出个小的"])
+        else:
+            return random.choice(["跟上", "出牌", "来了", "接着"])
+    
+    return ""
+
 @app.get("/")
 async def root():
     return {
-        "message": "斗地主AI后端服务器正在运行",
+        "message": "AI后端服务器正在运行",
         "status": "active",
         "endpoints": {
             "ai_decision": "/api/ai-play",
@@ -112,7 +159,10 @@ async def get_ai_decision(request: AIRequest):
                 # 使用保守策略：如果AI叫分无效，默认不叫
                 bid = 0
             
-            return {"decision": bid}
+            # Generate dialogue for bidding
+            dialogue = generate_bidding_dialogue(bid, request.maxBid, request.hand)
+            
+            return {"decision": bid, "dialogue": dialogue}
 
         # Phase 2: Playing
         elif request.phase == "playing":
@@ -183,18 +233,21 @@ async def get_ai_decision(request: AIRequest):
                     print(f"Warning: AI {request.playerId} tried to PASS when mustPlay=True. Triggering FAILBACK.", flush=True)
                     return {"decision": "FALLBACK"}
                 print(f"DeepSeek 调用成功 (Playing): Player {request.playerId} (AI) 选择了: 不要 (Pass)", flush=True)
-                return {"decision": "PASS"}
+                dialogue = generate_playing_dialogue("pass", request.lastRealPlay, request.landlordId == request.playerId)
+                return {"decision": "PASS", "dialogue": dialogue}
             elif resp_json.get("action", "").lower() == "play" and "cards" in resp_json:
                 print(f"DeepSeek 调用成功 (Playing): Player {request.playerId} (AI) 打出了牌: {resp_json['cards']}", flush=True)
-                return {"decision": resp_json["cards"]}
+                dialogue = generate_playing_dialogue("play", request.lastRealPlay, request.landlordId == request.playerId, resp_json["cards"])
+                return {"decision": resp_json["cards"], "dialogue": dialogue}
             else:
                 print(f"AI决策格式异常: {resp_json}", flush=True)
-                return {"decision": "PASS"}
+                dialogue = generate_playing_dialogue("pass", request.lastRealPlay, request.landlordId == request.playerId)
+                return {"decision": "PASS", "dialogue": dialogue}
 
     except Exception as e:
         print("Error calling DeepSeek API:", e)
         # Return HTTP 500 equivalent message or fallback instruction
-        return {"error": str(e), "decision": "FALLBACK"}
+        return {"error": str(e), "decision": "FALLBACK", "dialogue": ""}
 
 if __name__ == "__main__":
     import uvicorn

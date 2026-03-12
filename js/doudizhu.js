@@ -247,6 +247,148 @@ function playSound(type) {
     } catch (e) { }
 }
 
+// ========================
+//  DIALOGUE SYSTEM
+// ========================
+function generateLocalBiddingDialogue(bid, maxBid, hand) {
+    if (bid === 0) {
+        if (maxBid >= 2) {
+            return ['让你们来吧', '我就看看', '这手牌一般般'][Math.floor(Math.random() * 3)];
+        } else {
+            return ['不叫', '手牌不太行', '先观望一下'][Math.floor(Math.random() * 3)];
+        }
+    } else if (bid === 1) {
+        return ['试试看', '叫一分', '我来试试'][Math.floor(Math.random() * 3)];
+    } else if (bid === 2) {
+        return ['好牌必须叫', '两分！', '这手牌不错'][Math.floor(Math.random() * 3)];
+    } else if (bid === 3) {
+        return ['三分到底！', '必胜之局', '这把稳了'][Math.floor(Math.random() * 3)];
+    }
+    return '';
+}
+
+function generateLocalPlayingDialogue(action, lastRealPlay, isLandlord, playedCards = null) {
+    if (action === "pass") {
+        if (lastRealPlay) {
+            return ['不要', '跟不起', '让你过', '先等等'][Math.floor(Math.random() * 4)];
+        } else {
+            return ['不出', 'pass', '等等看'][Math.floor(Math.random() * 3)];
+        }
+    } else if (action === "play" && playedCards) {
+        const cardCount = playedCards.length;
+        
+        // Detect if it's a special play
+        if (cardCount === 4) { // Possible bomb
+            return ['炸弹来了！', '爆炸！', '哈哈炸弹'][Math.floor(Math.random() * 3)];
+        } else if (cardCount === 2 && playedCards.some(c => c.rank === '小王' || c.rank === '大王')) { // Rocket
+            return ['王炸！', '双王出击！', '无敌了'][Math.floor(Math.random() * 3)];
+        } else if (cardCount >= 5) { // Long sequence
+            return ['长牌压制', '顺子走起', '连牌漂亮'][Math.floor(Math.random() * 3)];
+        } else if (cardCount === 1) {
+            if (playedCards[0].value >= 15) { // 2 or joker
+                return ['大牌压制', '2来了', '压你一手'][Math.floor(Math.random() * 3)];
+            } else {
+                return ['出张小牌', '试探一下', '先出个小的'][Math.floor(Math.random() * 3)];
+            }
+        } else {
+            return ['跟上', '出牌', '来了', '接着'][Math.floor(Math.random() * 4)];
+        }
+    }
+    
+    return '';
+}
+
+function showAIDialogue(playerId, dialogue) {
+    if (!dialogue || dialogue.trim() === '') return;
+    
+    const pfx = playerId === PLAYER ? 'player' : `ai${playerId}`;
+    const avatarElement = $(`avatar-${pfx}`);
+    
+    if (!avatarElement) return;
+    
+    // Create dialogue bubble
+    const bubble = document.createElement('div');
+    bubble.className = 'ai-dialogue-bubble';
+    
+    // 智能分类对话样式
+    const dialogueType = classifyDialogue(dialogue);
+    if (dialogueType !== 'normal') {
+        bubble.classList.add(dialogueType);
+    }
+    
+    // 直接设置文本内容，不使用打字机效果
+    bubble.textContent = dialogue;
+    
+    // Position the bubble relative to the avatar
+    const container = avatarElement.closest('.player-zone') || avatarElement.closest('.player-info-row');
+    
+    if (container) {
+        container.style.position = 'relative';
+        bubble.style.position = 'absolute';
+        
+        if (playerId === AI2) { // Top AI
+            bubble.style.bottom = '100%';
+            bubble.style.left = '50%';
+            bubble.style.transform = 'translateX(-50%)';
+            bubble.style.marginBottom = '8px';
+        } else if (playerId === AI1) { // Right AI
+            bubble.style.right = '100%';
+            bubble.style.top = '50%';
+            bubble.style.transform = 'translateY(-50%)';
+            bubble.style.marginRight = '8px';
+        } else { // Player (shouldn't happen, but just in case)
+            bubble.style.top = '100%';
+            bubble.style.left = '50%';
+            bubble.style.transform = 'translateX(-50%)';
+            bubble.style.marginTop = '8px';
+        }
+        
+        // Remove any existing dialogue bubbles from this player
+        const existingBubble = container.querySelector('.ai-dialogue-bubble');
+        if (existingBubble) {
+            existingBubble.remove();
+        }
+        
+        container.appendChild(bubble);
+        
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            if (bubble && bubble.parentNode) {
+                bubble.style.opacity = '0';
+                setTimeout(() => {
+                    if (bubble && bubble.parentNode) {
+                        bubble.remove();
+                    }
+                }, 300);
+            }
+        }, 3000);
+    }
+}
+
+/**
+ * 根据对话内容智能分类样式
+ */
+function classifyDialogue(dialogue) {
+    const excited = ['炸弹', '王炸', '爆炸', '哈哈', '三分到底', '必胜', '稳了', '无敌'];
+    const confident = ['好牌必须叫', '大牌压制', '压你一手', '来了', '2来了', '必胜之局'];
+    const casual = ['试试看', '叫一分', '我来试试', '出张小牌', '试探一下', '先出个小的'];
+    
+    for (const keyword of excited) {
+        if (dialogue.includes(keyword)) return 'excited';
+    }
+    
+    for (const keyword of confident) {
+        if (dialogue.includes(keyword)) return 'confident';
+    }
+    
+    for (const keyword of casual) {
+        if (dialogue.includes(keyword)) return 'casual';
+    }
+    
+    return 'normal';
+}
+
+
 // Initialize on load
 window.addEventListener('DOMContentLoaded', () => {
     // No-op
@@ -391,6 +533,11 @@ async function getLLMDecision(context) {
 
         if (decision === 'FALLBACK') {
             throw new Error("Backend triggered fallback mode.");
+        }
+
+        // Display AI dialogue if available
+        if (data.dialogue) {
+            showAIDialogue(context.playerId, data.dialogue);
         }
 
         return decision;
@@ -684,17 +831,22 @@ function playerBid(score) {
 }
 
 async function aiBid(playerId) {
+    let decision;
+    let dialogue = '';
+
     // If master mode, try LLM first
     if (G.aiMode === 'master') {
         try {
-            const decision = await getLLMDecision({
+            const result = await getLLMDecision({
                 phase: 'bidding',
                 playerId: playerId,
                 hand: G.hands[playerId],
                 maxBid: G.maxBid,
                 landlordId: G.landlord
             });
-            if (typeof decision === 'number' && decision >= 0 && decision <= 3) {
+            if (typeof result === 'number' && result >= 0 && result <= 3) {
+                decision = result;
+                // Dialogue already handled in getLLMDecision
                 return decision;
             }
         } catch (e) {
@@ -702,17 +854,26 @@ async function aiBid(playerId) {
         }
     }
 
-    // Rule-based fallback
+    // Rule-based fallback (for normal mode or LLM failure)
     const hand = G.hands[playerId];
     const score = evaluateHand(hand);
     const maxAllowed = G.maxBid;
 
-    if (score >= 80 && maxAllowed < 3) return 3;
-    if (score >= 55 && maxAllowed < 2) return 2;
-    if (score >= 35 && maxAllowed < 1) return 1;
-    // 30% chance to bid 1 if ok hand
-    if (score >= 25 && maxAllowed < 1 && Math.random() > 0.5) return 1;
-    return 0; // pass
+    if (score >= 80 && maxAllowed < 3) decision = 3;
+    else if (score >= 55 && maxAllowed < 2) decision = 2;
+    else if (score >= 35 && maxAllowed < 1) decision = 1;
+    else if (score >= 25 && maxAllowed < 1 && Math.random() > 0.5) decision = 1;
+    else decision = 0;
+
+    // Generate dialogue for normal mode (30% chance)
+    if (G.aiMode === 'normal' && Math.random() < 0.3) {
+        dialogue = generateLocalBiddingDialogue(decision, G.maxBid, hand);
+        if (dialogue) {
+            showAIDialogue(playerId, dialogue);
+        }
+    }
+
+    return decision;
 }
 
 function evaluateHand(hand) {
@@ -1019,6 +1180,15 @@ async function doAIPlay(playerId) {
         // Pass
         G.passCount++;
         showLastPlay(playerId, [], true);
+        
+        // Generate dialogue for normal mode when passing (25% chance)
+        if (G.aiMode === 'normal' && Math.random() < 0.25) {
+            const dialogue = generateLocalPlayingDialogue("pass", G.lastRealPlay, G.landlord === playerId);
+            if (dialogue) {
+                showAIDialogue(playerId, dialogue);
+            }
+        }
+        
         await sleep(1000);
         if (G.passCount >= 2) {
             G.lastRealPlay = null;
@@ -1061,6 +1231,14 @@ async function doAIPlay(playerId) {
 
         showLastPlay(playerId, chosen, false);
         renderAIHand(playerId, hand.length);
+
+        // Generate dialogue for normal mode when playing cards (25% chance)
+        if (G.aiMode === 'normal' && Math.random() < 0.25) {
+            const dialogue = generateLocalPlayingDialogue("play", G.lastRealPlay, G.landlord === playerId, chosen);
+            if (dialogue) {
+                showAIDialogue(playerId, dialogue);
+            }
+        }
 
         // Record for LLM history
         G.pastRounds.push({

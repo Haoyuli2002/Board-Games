@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语音测试</title>
+</head>
+<body>
+    <h1>斗地主语音系统测试</h1>
+    <button onclick="testVoice()">测试语音播放</button>
+    <div id="log"></div>
+
+    <script>
+        let voiceMapping = {};
+        
+        // 加载语音映射文件
+        async function loadVoiceMapping() {
+            try {
+                const response = await fetch('./assets/voices/voice_mapping.json');
+                voiceMapping = await response.json();
+                console.log('语音映射加载成功:', Object.keys(voiceMapping).length, '个语音文件');
+                document.getElementById('log').innerHTML += '<p>✅ 语音映射加载成功: ' + Object.keys(voiceMapping).length + ' 个语音文件</p>';
+            } catch (error) {
+                console.warn('语音映射加载失败:', error);
+                document.getElementById('log').innerHTML += '<p>❌ 语音映射加载失败: ' + error.message + '</p>';
+            }
+        }
+
+        // 播放语音
+        function playVoice(text) {
+            // 检查是否有对应的语音文件
+            if (!voiceMapping[text]) {
+                console.log('没有找到语音文件:', text);
+                document.getElementById('log').innerHTML += '<p>⚠️ 没有找到语音文件: ' + text + '</p>';
+                return;
+            }
+            
+            const audioPath = voiceMapping[text];
+            console.log('尝试播放语音:', text, '路径:', audioPath);
+            document.getElementById('log').innerHTML += '<p>🎵 尝试播放语音: ' + text + ' (路径: ' + audioPath + ')</p>';
+            
+            // 创建新的音频对象
+            const audio = new Audio(audioPath);
+            audio.volume = 0.7; // 设置音量
+            
+            audio.addEventListener('canplay', () => {
+                console.log('音频文件已加载，开始播放');
+                document.getElementById('log').innerHTML += '<p>✅ 音频文件已加载，开始播放</p>';
+                audio.play().catch(err => {
+                    console.log('语音播放失败:', err);
+                    document.getElementById('log').innerHTML += '<p>❌ 语音播放失败: ' + err.message + '</p>';
+                });
+            });
+            
+            audio.addEventListener('error', (e) => {
+                console.warn('语音文件加载失败:', audioPath, e);
+                document.getElementById('log').innerHTML += '<p>❌ 语音文件加载失败: ' + audioPath + ' - ' + e.message + '</p>';
+            });
+            
+            audio.load();
+        }
+
+        function testVoice() {
+            document.getElementById('log').innerHTML += '<p>📢 开始测试语音播放...</p>';
+            
+            // 检查浏览器音频上下文
+            if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+                document.getElementById('log').innerHTML += '<p>✅ 浏览器支持Web Audio API</p>';
+            } else {
+                document.getElementById('log').innerHTML += '<p>⚠️ 浏览器不完全支持Web Audio API</p>';
+            }
+            
+            playVoice('让你们来吧');
+        }
+
+        // 页面加载时初始化
+        window.addEventListener('load', () => {
+            loadVoiceMapping();
+        });
+    </script>
+</body>
+</html>

@@ -43,9 +43,9 @@ def generate_bidding_dialogue(bid, max_bid, hand):
     elif bid == 1:
         return random.choice(["试试看", "叫一分", "我来试试"])
     elif bid == 2:
-        return random.choice(["好牌必须叫", "两分！", "这手牌不错"])
+        return random.choice(["好牌必须叫", "两分", "这手牌不错"])
     elif bid == 3:
-        return random.choice(["三分到底！", "必胜之局", "这把稳了"])
+        return random.choice(["三分到底", "必胜之局", "这把稳了"])
     return ""
 
 def generate_playing_dialogue(action, last_real_play, is_landlord, played_cards=None):
@@ -60,9 +60,9 @@ def generate_playing_dialogue(action, last_real_play, is_landlord, played_cards=
         
         # Detect if it's a special play
         if card_count == 4:  # Possible bomb
-            return random.choice(["炸弹来了！", "爆炸！", "哈哈炸弹"])
+            return random.choice(["炸弹来了", "爆炸", "哈哈炸弹"])
         elif card_count == 2 and any(c.get('rank') in ['小王', '大王'] for c in played_cards):  # Rocket
-            return random.choice(["王炸！", "双王出击！", "无敌了"])
+            return random.choice(["王炸", "双王出击", "无敌了"])
         elif card_count >= 5:  # Long sequence
             return random.choice(["长牌压制", "顺子走起", "连牌漂亮"])
         elif card_count == 1:

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单音频测试</title>
+</head>
+<body>
+    <h1>音频文件测试</h1>
+    
+    <h2>方法1: HTML5 Audio标签 (用户控制)</h2>
+    <audio controls>
+        <source src="assets/voices/让你们来吧_df2bb5f8.wav" type="audio/wav">
+        您的浏览器不支持音频播放。
+    </audio>
+    
+    <h2>方法2: JavaScript播放 (需要用户交互)</h2>
+    <button onclick="playAudioJS()">点击播放音频</button>
+    <div id="status"></div>
+    
+    <h2>方法3: 测试文件访问</h2>
+    <button onclick="testFileAccess()">测试文件访问</button>
+    <div id="fileStatus"></div>
+
+    <script>
+        function playAudioJS() {
+            const status = document.getElementById('status');
+            status.innerHTML = '🎵 尝试播放音频...';
+            
+            const audio = new Audio('assets/voices/让你们来吧_df2bb5f8.wav');
+            audio.volume = 0.7;
+            
+            audio.addEventListener('loadstart', () => {
+                status.innerHTML += '<br>📥 开始加载音频文件...';
+            });
+            
+            audio.addEventListener('canplay', () => {
+                status.innerHTML += '<br>✅ 音频文件已加载，可以播放';
+                audio.play().then(() => {
+                    status.innerHTML += '<br>🔊 音频播放成功！';
+                }).catch(err => {
+                    status.innerHTML += '<br>❌ 播放失败: ' + err.message;
+                });
+            });
+            
+            audio.addEventListener('error', (e) => {
+                status.innerHTML += '<br>❌ 音频加载错误: ' + (e.message || '未知错误');
+            });
+            
+            audio.addEventListener('ended', () => {
+                status.innerHTML += '<br>🏁 音频播放完成';
+            });
+            
+            // 开始加载
+            audio.load();
+        }
+        
+        async function testFileAccess() {
+            const fileStatus = document.getElementById('fileStatus');
+            fileStatus.innerHTML = '🔍 测试文件访问...';
+            
+            try {
+                const response = await fetch('assets/voices/让你们来吧_df2bb5f8.wav');
+                fileStatus.innerHTML += '<br>📊 HTTP状态: ' + response.status;
+                fileStatus.innerHTML += '<br>📝 内容类型: ' + response.headers.get('content-type');
+                fileStatus.innerHTML += '<br>📏 文件大小: ' + response.headers.get('content-length') + ' 字节';
+                
+                if (response.ok) {
+                    fileStatus.innerHTML += '<br>✅ 文件访问成功！';
+                } else {
+                    fileStatus.innerHTML += '<br>❌ 文件访问失败';
+                }
+            } catch (error) {
+                fileStatus.innerHTML += '<br>❌ 访问错误: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

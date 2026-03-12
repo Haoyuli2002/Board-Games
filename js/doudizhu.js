@@ -208,53 +208,115 @@ const PLAYER = 0, AI1 = 1, AI2 = 2;
 const NAMES = ['你', '右家（AI）', '上家（AI）'];
 const ZONE_IDS = ['zone-player', 'zone-ai1', 'zone-ai2'];
 
-// TTS语音系统
-let voiceMapping = {};
-let audioCache = {};
+// TTS语音系统 - 内嵌语音映射，无需网络请求
+const VOICE_MAPPING = {
+    "让你们来吧": "assets/voices/让你们来吧_df2bb5f8.wav",
+    "我就看看": "assets/voices/我就看看_25098ecb.wav",
+    "这手牌一般般": "assets/voices/这手牌一般般_315025e3.wav",
+    "不叫": "assets/voices/不叫_0c712120.wav",
+    "手牌不太行": "assets/voices/手牌不太行_d713c2e6.wav",
+    "先观望一下": "assets/voices/先观望一下_a60722e5.wav",
+    "试试看": "assets/voices/试试看_bb5e4c8d.wav",
+    "叫一分": "assets/voices/叫一分_6324e44a.wav",
+    "我来试试": "assets/voices/我来试试_efe9deb6.wav",
+    "好牌必须叫": "assets/voices/好牌必须叫_97433d99.wav",
+    "两分": "assets/voices/两分_aa2d006a.wav",
+    "这手牌不错": "assets/voices/这手牌不错_17520179.wav",
+    "三分到底": "assets/voices/三分到底_ddad80e9.wav",
+    "必胜之局": "assets/voices/必胜之局_14bf332e.wav",
+    "这把稳了": "assets/voices/这把稳了_ae1b8538.wav",
+    "不要": "assets/voices/不要_498957b3.wav",
+    "跟不起": "assets/voices/跟不起_1853f730.wav",
+    "让你过": "assets/voices/让你过_9948dfb9.wav",
+    "先等等": "assets/voices/先等等_ebd602fb.wav",
+    "不出": "assets/voices/不出_72447182.wav",
+    "等等看": "assets/voices/等等看_57e2bce2.wav",
+    "炸弹来了": "assets/voices/炸弹来了_1c7aba83.wav",
+    "爆炸": "assets/voices/爆炸_0652742f.wav",
+    "哈哈炸弹": "assets/voices/哈哈炸弹_68eb7811.wav",
+    "王炸": "assets/voices/王炸_aceffeef.wav",
+    "双王出击": "assets/voices/双王出击_a08adb98.wav",
+    "无敌了": "assets/voices/无敌了_cf3b5298.wav",
+    "长牌压制": "assets/voices/长牌压制_7652253b.wav",
+    "顺子走起": "assets/voices/顺子走起_e3be537c.wav",
+    "连牌漂亮": "assets/voices/连牌漂亮_5610c30a.wav",
+    "大牌压制": "assets/voices/大牌压制_09c8fc48.wav",
+    "2来了": "assets/voices/2来了_dc1976d5.wav",
+    "压你一手": "assets/voices/压你一手_824ae647.wav",
+    "出张小牌": "assets/voices/出张小牌_5cbf6376.wav",
+    "试探一下": "assets/voices/试探一下_0b98377a.wav",
+    "先出个小的": "assets/voices/先出个小的_295a0a03.wav",
+    "跟上": "assets/voices/跟上_9a977c6d.wav",
+    "出牌": "assets/voices/出牌_50fecc59.wav",
+    "来了": "assets/voices/来了_0424ac2f.wav",
+    "接着": "assets/voices/接着_7c90c225.wav"
+};
 
-// 加载语音映射文件
+let voiceMapping = VOICE_MAPPING;
+let audioCache = {};
+let audioEnabled = false;
+let audioUnlocked = false;
+
+// 文档级别点击解锁 —— 覆盖所有用户交互场景
+function _unlockAudioOnce() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    // 预创建全部语音 Audio 对象，确保在用户手势上下文中完成
+    Object.entries(VOICE_MAPPING).forEach(([text, path]) => {
+        try {
+            const a = new Audio(encodeURI(path));
+            a.preload = 'auto';
+            a.volume = 0.7;
+            audioCache[text] = a;
+        } catch (e) { /* ignore */ }
+    });
+    console.log('音频已解锁，预创建', Object.keys(audioCache).length, '个语音对象');
+}
+document.addEventListener('click', _unlockAudioOnce, { once: true });
+
+// 初始化音频系统（游戏开始时调用）
+function initAudioSystem() {
+    _unlockAudioOnce();   // 确保在按钮点击上下文中运行
+    audioEnabled = true;
+    console.log('音频系统已激活');
+}
+
+// 加载语音映射文件（内嵌映射已就绪，此函数保留作兼容用途）
 async function loadVoiceMapping() {
-    try {
-        const response = await fetch('./assets/voices/voice_mapping.json');
-        voiceMapping = await response.json();
-        console.log('语音映射加载成功:', Object.keys(voiceMapping).length, '个语音文件');
-    } catch (error) {
-        console.warn('语音映射加载失败:', error);
-    }
+    console.log('语音映射已就绪:', Object.keys(voiceMapping).length, '个语音文件');
 }
 
 // 播放语音
 function playVoice(text) {
-    // 检查是否有对应的语音文件
-    if (!voiceMapping[text]) {
+    if (!audioEnabled) {
+        console.log('音频系统未激活，跳过语音播放:', text);
+        return;
+    }
+
+    if (!VOICE_MAPPING[text]) {
         console.log('没有找到语音文件:', text);
         return;
     }
-    
-    const audioPath = voiceMapping[text];
-    
-    // 检查缓存
+
+    const play = (audio) => {
+        audio.currentTime = 0;
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(err => console.warn('语音播放失败 [' + text + ']:', err.message));
+        }
+    };
+
+    // 优先使用预创建的缓存对象
     if (audioCache[text]) {
-        const audio = audioCache[text];
-        audio.currentTime = 0; // 重置播放位置
-        audio.play().catch(err => console.log('语音播放失败:', err));
+        play(audioCache[text]);
         return;
     }
-    
-    // 创建新的音频对象
-    const audio = new Audio(audioPath);
-    audio.volume = 0.7; // 设置音量
-    
-    audio.addEventListener('canplay', () => {
-        audioCache[text] = audio; // 缓存音频对象
-        audio.play().catch(err => console.log('语音播放失败:', err));
-    });
-    
-    audio.addEventListener('error', (e) => {
-        console.warn('语音文件加载失败:', audioPath, e);
-    });
-    
-    audio.load();
+
+    // 回退：即时创建（应该不会走到这里）
+    const audio = new Audio(encodeURI(VOICE_MAPPING[text]));
+    audio.volume = 0.7;
+    audioCache[text] = audio;
+    play(audio);
 }
 
 // ========================
@@ -309,9 +371,9 @@ function generateLocalBiddingDialogue(bid, maxBid, hand) {
     } else if (bid === 1) {
         return ['试试看', '叫一分', '我来试试'][Math.floor(Math.random() * 3)];
     } else if (bid === 2) {
-        return ['好牌必须叫', '两分！', '这手牌不错'][Math.floor(Math.random() * 3)];
+        return ['好牌必须叫', '两分', '这手牌不错'][Math.floor(Math.random() * 3)];
     } else if (bid === 3) {
-        return ['三分到底！', '必胜之局', '这把稳了'][Math.floor(Math.random() * 3)];
+        return ['三分到底', '必胜之局', '这把稳了'][Math.floor(Math.random() * 3)];
     }
     return '';
 }
@@ -328,9 +390,9 @@ function generateLocalPlayingDialogue(action, lastRealPlay, isLandlord, playedCa
         
         // Detect if it's a special play
         if (cardCount === 4) { // Possible bomb
-            return ['炸弹来了！', '爆炸！', '哈哈炸弹'][Math.floor(Math.random() * 3)];
+            return ['炸弹来了', '爆炸', '哈哈炸弹'][Math.floor(Math.random() * 3)];
         } else if (cardCount === 2 && playedCards.some(c => c.rank === '小王' || c.rank === '大王')) { // Rocket
-            return ['王炸！', '双王出击！', '无敌了'][Math.floor(Math.random() * 3)];
+            return ['王炸', '双王出击', '无敌了'][Math.floor(Math.random() * 3)];
         } else if (cardCount >= 5) { // Long sequence
             return ['长牌压制', '顺子走起', '连牌漂亮'][Math.floor(Math.random() * 3)];
         } else if (cardCount === 1) {
@@ -749,6 +811,9 @@ function renderKitty(reveal = false) {
 //  GAME FLOW
 // ========================
 async function startGame() {
+    // 初始化音频系统（用户点击开始游戏时）
+    initAudioSystem();
+    
     // Reset state, preserving global settings
     G = {
         phase: 'dealing',
@@ -832,10 +897,10 @@ async function runBidding() {
             showBidArea();
             await waitForPlayerBid();
             $('bidArea').style.display = 'none';
-            await sleep(1800); // 给玩家叫分结果留出显示时间
+            await sleep(1500); // 玩家叫分结果显示
         } else {
             setTurnIndicator(`${NAMES[turn]} 正在叫地主...`, false);
-            await sleep(2000 + Math.random() * 2000); // 增加 AI 思考感
+            await sleep(1500 + Math.random() * 800); // AI 叫分思考 1.5~2.3秒
             const bid = await aiBid(turn);
             G.bids[turn] = bid;
             if (bid > G.maxBid) {
@@ -843,7 +908,7 @@ async function runBidding() {
                 G.landlord = turn;
             }
             showBidToast(turn, bid);
-            await sleep(2000); // 增加显示结果时间
+            await sleep(1500); // 叫分结果显示
         }
 
         // If someone bid 3 (max), stop
@@ -917,8 +982,8 @@ async function aiBid(playerId) {
     else if (score >= 25 && maxAllowed < 1 && Math.random() > 0.5) decision = 1;
     else decision = 0;
 
-    // Generate dialogue for normal mode (30% chance)
-    if (G.aiMode === 'normal' && Math.random() < 0.3) {
+    // Generate dialogue for normal mode (100% chance)
+    if (G.aiMode === 'normal' && Math.random() < 1.0) {
         dialogue = generateLocalBiddingDialogue(decision, G.maxBid, hand);
         if (dialogue) {
             showAIDialogue(playerId, dialogue);
@@ -1032,7 +1097,7 @@ async function runPlay() {
             setTurnIndicator(`${NAMES[G.currentTurn]} 出牌中...`, false);
             setActiveAvatar(G.currentTurn);
             $('playArea').style.display = 'none';
-            await sleep(700 + Math.random() * 700);
+            await sleep(1500 + Math.random() * 500); // AI 出牌思考 1.5~2秒
             try {
                 await doAIPlay(G.currentTurn);
             } catch (e) {
@@ -1123,7 +1188,7 @@ async function playerPass() {
     showLastPlay(PLAYER, [], true);
     $('playArea').style.display = 'none';
 
-    await sleep(1000);
+    await sleep(1500);
 
     // Record for LLM history
     G.pastRounds.push({
@@ -1233,15 +1298,15 @@ async function doAIPlay(playerId) {
         G.passCount++;
         showLastPlay(playerId, [], true);
         
-        // Generate dialogue for normal mode when passing (25% chance)
-        if (G.aiMode === 'normal' && Math.random() < 0.25) {
+        // Generate dialogue for normal mode when passing (100% chance)
+        if (G.aiMode === 'normal' && Math.random() < 1.0) {
             const dialogue = generateLocalPlayingDialogue("pass", G.lastRealPlay, G.landlord === playerId);
             if (dialogue) {
                 showAIDialogue(playerId, dialogue);
             }
         }
         
-        await sleep(1000);
+        await sleep(1500);
         if (G.passCount >= 2) {
             G.lastRealPlay = null;
             G.passCount = 0;
@@ -1261,7 +1326,7 @@ async function doAIPlay(playerId) {
             // 检测到非法牌型，强制跳过
             G.passCount++;
             showLastPlay(playerId, [], true);
-            await sleep(1000);
+            await sleep(1500);
             if (G.passCount >= 2) {
                 G.lastRealPlay = null;
                 G.passCount = 0;
@@ -1284,8 +1349,8 @@ async function doAIPlay(playerId) {
         showLastPlay(playerId, chosen, false);
         renderAIHand(playerId, hand.length);
 
-        // Generate dialogue for normal mode when playing cards (25% chance)
-        if (G.aiMode === 'normal' && Math.random() < 0.25) {
+        // Generate dialogue for normal mode when playing cards (100% chance)
+        if (G.aiMode === 'normal' && Math.random() < 1.0) {
             const dialogue = generateLocalPlayingDialogue("play", G.lastRealPlay, G.landlord === playerId, chosen);
             if (dialogue) {
                 showAIDialogue(playerId, dialogue);

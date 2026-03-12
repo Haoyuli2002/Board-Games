@@ -21,9 +21,8 @@
     <!-- 导航栏 -->
     <div class="nav-bar">
         <button class="btn-back" onclick="goLobby()" aria-label="返回大厅">← 大厅</button>
-        <button class="btn-pause" id="btnPause" onclick="togglePause()" aria-label="暂停游戏">暂停</button>
         <button class="btn-pause" id="doudizhuBgmBtn" onclick="toggleDoudizhuBgm()" aria-label="切换音乐"
-            style="margin-left:10px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+            style="display: flex; align-items: center; justify-content: center; gap: 4px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="bgmIcon">
                 <path d="M9 18V5l12-2v13"></path>
@@ -32,11 +31,23 @@
             </svg>
             <span id="bgmLabel">OFF</span>
         </button>
-        <button class="btn-restart" id="btnRestart" onclick="restartGame()">重新开始</button>
+        <button class="btn-pause" id="aiDialogueBtn" onclick="toggleAIDialogue()" aria-label="切换AI语音"
+            style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+            <span id="aiDialogueLabel">AI交互 OFF</span>
+        </button>
         <select class="ai-mode-select" id="aiModeSelect" onchange="setAiMode(this.value)" aria-label="切换AI难度">
             <option value="normal">普通 AI</option>
             <option value="master">大师 AI</option>
         </select>
+        <button class="btn-restart" id="btnRestart" onclick="restartGame()">重新开始</button>
+        <button class="btn-pause" id="btnPause" onclick="togglePause()" aria-label="暂停游戏">暂停</button>
     </div>
 
     <!-- 规则按钮 -->

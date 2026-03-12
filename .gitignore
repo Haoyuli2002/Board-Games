@@ -41,3 +41,4 @@ backend/.env
 
 # TTS generated files (optional - uncomment if you don't want to commit voice files)
 # assets/voices/*.wav
+asset/

@@ -53,13 +53,19 @@ body {
 }
 
 /* ========================
-   BACK / RULES BUTTONS
+   NAV / RULES BUTTONS
    ======================== */
-.btn-back {
+.nav-bar {
     position: fixed;
     top: 16px;
     left: 16px;
     z-index: 200;
+    display: flex;
+    gap: 12px;
+}
+
+.btn-back,
+.btn-pause {
     background: rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(201, 168, 76, 0.4);
     color: var(--gold);
@@ -73,9 +79,64 @@ body {
     letter-spacing: 1px;
 }
 
-.btn-back:hover {
+.btn-back:hover,
+.btn-pause:hover {
     background: rgba(201, 168, 76, 0.15);
 }
+
+.btn-pause.paused {
+    background: var(--gold);
+    color: #111;
+    box-shadow: 0 0 15px var(--gold);
+}
+
+/* AI Mode Toggle */
+.ai-mode-toggle {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(201, 168, 76, 0.4);
+    border-radius: 20px;
+    display: flex;
+    position: relative;
+    padding: 2px;
+    backdrop-filter: blur(10px);
+    height: 34px;
+    align-items: center;
+}
+
+.mode-option {
+    padding: 0 14px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(201, 168, 76, 0.6);
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.3s;
+    user-select: none;
+    line-height: 30px;
+}
+
+.mode-option.active {
+    color: #111;
+}
+
+.mode-slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 44px;
+    /* Default for '普通' */
+    height: 30px;
+    background: var(--gold);
+    border-radius: 17px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+}
+
+.ai-mode-toggle[data-mode="master"] .mode-slider {
+    left: 48px;
+    width: 44px;
+}
+
 
 .rules-toggle {
     position: fixed;
@@ -441,17 +502,12 @@ body {
     color: #ff6b35;
 }
 
-/* Kitty (底牌) */
+/* Kitty (底牌) - 常驻左侧 */
 .kitty-area {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    transition: opacity 0.35s ease, transform 0.35s ease;
-}
-
-/* 出牌阶段：底牌移到左侧后的紧凑样式 */
-.kitty-area.kitty-left {
+    gap: 3px;
     padding: 8px 6px;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(201, 168, 76, 0.2);
@@ -459,27 +515,16 @@ body {
     backdrop-filter: blur(6px);
 }
 
-.kitty-area.kitty-left .kitty-cards {
+.kitty-area .kitty-cards {
+    display: flex;
     flex-direction: column;
-    min-height: unset;
     gap: 3px;
 }
 
-.kitty-area.kitty-left .kitty-label {
+.kitty-label {
     writing-mode: horizontal-tb;
     font-size: 0.6rem;
-}
-
-/* 过渡动画 */
-.kitty-area.kitty-moving {
-    opacity: 0;
-    transform: scale(0.85);
-}
-
-
-.kitty-label {
-    font-size: 0.65rem;
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.6);
     letter-spacing: 2px;
     text-transform: uppercase;
 }
@@ -578,6 +623,15 @@ body {
     line-height: 1;
 }
 
+.card-rank-joker {
+    font-size: 0.7em;
+    /* 缩小一点以适应 JOKER 五个字母 */
+    writing-mode: vertical-lr;
+    /* 竖着排，更有大小王的感觉 */
+    text-orientation: upright;
+    letter-spacing: -2px;
+}
+
 .card-suit {
     font-size: 0.8em;
     line-height: 1;
@@ -670,6 +724,78 @@ body {
     justify-content: center;
     padding: 6px 0 10px;
     min-height: 56px;
+}
+
+/* Bidding Enhancements */
+.player-zone.bidding-active .player-avatar::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 3px solid var(--gold);
+    border-radius: 50%;
+    box-shadow: 0 0 20px var(--gold), inset 0 0 10px var(--gold);
+    animation: bidder-glow 1.5s infinite ease-in-out;
+}
+
+@keyframes bidder-glow {
+
+    0%,
+    100% {
+        opacity: 0.4;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+.bid-bubble {
+    position: absolute;
+    background: linear-gradient(135deg, #fde68a, #fbbf24);
+    color: #92400e;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 900;
+    font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    animation: bubble-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 2px solid #fff;
+}
+
+@keyframes bubble-pop {
+    0% {
+        transform: scale(0.5) translateY(10px);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.zone-player .bid-bubble {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 20px;
+}
+
+.zone-right .bid-bubble {
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 20px;
+}
+
+.zone-top .bid-bubble {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 20px;
 }
 
 /* Bid area */

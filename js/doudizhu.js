@@ -198,7 +198,10 @@ let G = {
     lastRealPlay: null,     // last non-pass play
     passCount: 0,
     totalScore: 0,
-    sortDescending: true    // player's hand sort direction
+    sortDescending: true,   // player's hand sort direction
+    isPaused: false,        // global pause state
+    aiMode: 'normal',       // normal | master
+    pastRounds: []          // history of plays for LLM context: [{player, cards, pattern}]
 };
 
 const PLAYER = 0, AI1 = 1, AI2 = 2;
@@ -228,7 +231,36 @@ function playSound(type) {
 //  UI HELPERS
 // ========================
 function $(id) { return document.getElementById(id); }
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/**
+ * Enhanced sleep that respects global pause state
+ */
+async function sleep(ms) {
+    let elapsed = 0;
+    const interval = 100;
+    while (elapsed < ms) {
+        if (!G.isPaused) {
+            elapsed += interval;
+        }
+        await new Promise(r => setTimeout(r, interval));
+    }
+}
+
+function togglePause() {
+    G.isPaused = !G.isPaused;
+    const btn = $('btnPause');
+    if (btn) {
+        btn.textContent = G.isPaused ? '继续' : '暂停';
+        btn.classList.toggle('paused', G.isPaused);
+    }
+
+    // Optional: show a pause overlay
+    if (G.isPaused) {
+        setTurnIndicator('游戏已暂停', false);
+    } else {
+        setTurnIndicator(G.currentTurn === PLAYER ? '轮到你' : `${NAMES[G.currentTurn]} 正在行动...`, G.currentTurn === PLAYER);
+    }
+}
 
 function goLobby() {
     const ov = document.createElement('div');
@@ -238,6 +270,21 @@ function goLobby() {
         ov.style.opacity = '1';
         setTimeout(() => window.location.href = 'lobby.html', 400);
     });
+}
+
+/**
+ * Switch AI mode between 'normal' and 'master'
+ */
+function setAiMode(mode) {
+    G.aiMode = mode;
+    const toggle = $('aiModeToggle');
+    if (toggle) {
+        toggle.setAttribute('data-mode', mode);
+        toggle.querySelectorAll('.mode-option').forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.mode === mode);
+        });
+    }
+    console.log(`AI Mode switched to: ${mode}`);
 }
 
 function toggleRules() {
@@ -255,7 +302,7 @@ function makeCard(card, size = 'md') {
     el.dataset.suit = card.suit;
 
     if (isJoker) {
-        el.innerHTML = `<span class="card-rank">${card.rank === '大王' ? '大' : '小'}</span><span class="card-suit">${card.rank === '大王' ? '🃏' : '🃏'}</span>`;
+        el.innerHTML = `<span class="card-rank card-rank-joker">JOKER</span><span class="card-suit">${card.rank === '大王' ? '🃏' : '🃏'}</span>`;
     } else {
         el.innerHTML = `<span class="card-rank">${card.rank}</span><span class="card-suit">${card.suit}</span><span class="card-center">${card.suit}</span>`;
     }
@@ -274,6 +321,52 @@ function renderAIHand(playerId, count) {
     for (let i = 0; i < count; i++) {
         el.appendChild(makeCardBack());
     }
+}
+
+/**
+ * Core LLM decision function.
+ * Connects to the local Python FastAPI server which acts as the anti-corruption layer for the LLM API.
+ */
+async function getLLMDecision(context) {
+    const pfx = context.playerId === AI1 ? 'AI1' : 'AI2';
+    setTurnIndicator(`${NAMES[context.playerId]} 正在思考大局...`, false);
+
+    try {
+        const response = await fetch('http://127.0.0.1:5000/api/ai-play', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(context)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const decision = data.decision;
+
+        if (decision === 'FALLBACK') {
+            throw new Error("Backend triggered fallback mode.");
+        }
+
+        return decision;
+
+    } catch (e) {
+        console.warn("Failed to connect to AI server, falling back to rule-based:", e);
+        // Rule-based Fallback directly here since it failed to get a valid response
+        if (context.phase === 'bidding') {
+            const strength = evaluateHand(context.hand);
+            if (strength > 70) return 3;
+            if (strength > 40 && context.maxBid < 2) return 2;
+            return 0;
+        }
+
+        if (context.phase === 'playing') {
+            if (context.mustPlay) return aiFindBestPlay(context.hand);
+            return findBestPlay(context.hand, context.lastRealPlay ? context.lastRealPlay.pattern : null);
+        }
+    }
+    return null;
 }
 
 function renderPlayerHand() {
@@ -336,19 +429,6 @@ function clearAllLastPlays() {
         $(`lastplaycards-${pfx}`).innerHTML = '';
         $(`pass-${pfx}`).style.display = 'none';
     });
-}
-
-function moveKittyToLeft() {
-    const kittyArea = $('kittyArea');
-    const leftZone = $('kittyLeftZone');
-    if (!kittyArea || !leftZone || leftZone.contains(kittyArea)) return;
-    // 添加过渡动画类名
-    kittyArea.classList.add('kitty-moving');
-    setTimeout(() => {
-        leftZone.appendChild(kittyArea);
-        kittyArea.classList.remove('kitty-moving');
-        kittyArea.classList.add('kitty-left');
-    }, 350);
 }
 
 function setTurnIndicator(msg, active = false) {
@@ -491,15 +571,18 @@ async function runBidding() {
 
     while (round < 3) {
         G.currentTurn = turn;
+        // 高亮当前叫分者
+        ZONE_IDS.forEach((id, i) => $(id).classList.toggle('bidding-active', i === turn));
 
         if (turn === PLAYER) {
             setTurnIndicator('轮到你叫地主', true);
             showBidArea();
             await waitForPlayerBid();
             $('bidArea').style.display = 'none';
+            await sleep(1800); // 给玩家叫分结果留出显示时间
         } else {
             setTurnIndicator(`${NAMES[turn]} 正在叫地主...`, false);
-            await sleep(800 + Math.random() * 600);
+            await sleep(2000 + Math.random() * 2000); // 增加 AI 思考感
             const bid = aiBid(turn);
             G.bids[turn] = bid;
             if (bid > G.maxBid) {
@@ -507,7 +590,7 @@ async function runBidding() {
                 G.landlord = turn;
             }
             showBidToast(turn, bid);
-            await sleep(600);
+            await sleep(2000); // 增加显示结果时间
         }
 
         // If someone bid 3 (max), stop
@@ -516,6 +599,8 @@ async function runBidding() {
         turn = (turn + 1) % 3;
         round++;
     }
+    // 清除高亮
+    ZONE_IDS.forEach(id => $(id).classList.remove('bidding-active'));
 
     // If no one bid, restart bidding (all pass scenario)
     if (G.landlord === -1) {
@@ -544,8 +629,25 @@ function playerBid(score) {
     if (bidResolve) { bidResolve(); bidResolve = null; }
 }
 
-function aiBid(playerId) {
-    // Simple: bid based on hand strength
+async function aiBid(playerId) {
+    // If master mode, try LLM first
+    if (G.aiMode === 'master') {
+        try {
+            const decision = await getLLMDecision({
+                phase: 'bidding',
+                playerId: playerId,
+                hand: G.hands[playerId],
+                maxBid: G.maxBid
+            });
+            if (typeof decision === 'number' && decision >= 0 && decision <= 3) {
+                return decision;
+            }
+        } catch (e) {
+            console.error('LLM Bidding Error, falling back to rule-based:', e);
+        }
+    }
+
+    // Rule-based fallback
     const hand = G.hands[playerId];
     const score = evaluateHand(hand);
     const maxAllowed = G.maxBid;
@@ -582,20 +684,32 @@ function evaluateHand(hand) {
 
 function showBidToast(playerId, bid) {
     const pfx = playerId === PLAYER ? 'player' : `ai${playerId}`;
-    // Show as last play area temporarily
-    const cardsEl = $(`lastplaycards-${pfx}`);
-    const passEl = $(`pass-${pfx}`);
-    cardsEl.innerHTML = '';
-    passEl.style.display = 'none';
+    const zone = $(ZONE_IDS[playerId]);
 
-    if (bid === 0) {
-        passEl.textContent = '不叫';
-        passEl.style.display = 'block';
+    // 移除旧气泡
+    const oldBubble = zone.querySelector('.bid-bubble');
+    if (oldBubble) oldBubble.remove();
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bid-bubble';
+    bubble.textContent = bid === 0 ? '不叫' : `叫 ${bid} 分`;
+
+    if (bid > 0) {
+        bubble.style.background = bid >= 3 ? 'linear-gradient(135deg, #ff8c00, #ff4500)' :
+            bid >= 2 ? 'linear-gradient(135deg, #fde68a, #fbbf24)' :
+                'linear-gradient(135deg, #d9f99d, #84cc16)';
+        bubble.style.color = bid >= 3 ? '#fff' : '#92400e';
     } else {
-        passEl.textContent = `叫 ${bid} 分`;
-        passEl.style.display = 'block';
-        passEl.style.color = bid >= 3 ? '#ff6b35' : bid >= 2 ? '#fde68a' : '#86efac';
+        bubble.style.background = 'linear-gradient(135deg, #e5e7eb, #9ca3af)';
+        bubble.style.color = '#374151';
     }
+
+    zone.appendChild(bubble);
+
+    // 自动清除
+    setTimeout(() => {
+        if (bubble.parentNode) bubble.remove();
+    }, 2500);
 }
 
 async function assignLandlord() {
@@ -626,7 +740,7 @@ async function assignLandlord() {
     G.currentTurn = G.landlord;
     G.lastRealPlay = null;
     G.passCount = 0;
-    moveKittyToLeft();  // 底牌移到左侧
+    G.passCount = 0;
     await runPlay();
 }
 
@@ -723,6 +837,14 @@ async function playerPlay() {
     $('playArea').style.display = 'none';
 
     if (playResolve) { playResolve(); playResolve = null; }
+
+    // Record for LLM history
+    G.pastRounds.push({
+        player: PLAYER,
+        playerName: NAMES[PLAYER],
+        cards: [...selected],
+        pattern: detectPattern(selected)
+    });
 }
 
 async function playerPass() {
@@ -736,6 +858,14 @@ async function playerPass() {
     G.passCount++;
     showLastPlay(PLAYER, [], true);
     $('playArea').style.display = 'none';
+
+    // Record for LLM history
+    G.pastRounds.push({
+        player: PLAYER,
+        playerName: NAMES[PLAYER],
+        cards: [],
+        pattern: { type: 'pass' }
+    });
 
     // If everyone passed the last real play, reset
     if (G.passCount >= 2) {
@@ -777,10 +907,39 @@ async function doAIPlay(playerId) {
     const mustPlay = (G.lastRealPlay === null || G.lastRealPlay.player === playerId);
 
     let chosen = null;
-    if (mustPlay) {
-        chosen = aiFindBestPlay(hand);
-    } else {
-        chosen = findBestPlay(hand, G.lastRealPlay.pattern);
+
+    // If master mode, try LLM first
+    if (G.aiMode === 'master') {
+        try {
+            const decision = await getLLMDecision({
+                phase: 'playing',
+                playerId: playerId,
+                hand: hand,
+                mustPlay: mustPlay,
+                lastRealPlay: G.lastRealPlay,
+                pastRounds: G.pastRounds
+            });
+            if (decision === 'PASS') {
+                chosen = null;
+            } else if (Array.isArray(decision)) {
+                // Validate if cards are in hand
+                const validCards = decision.filter(c => hand.some(h => h.rank === c.rank && h.suit === c.suit));
+                if (validCards.length === decision.length) {
+                    chosen = decision;
+                }
+            }
+        } catch (e) {
+            console.error('LLM Playing Error, falling back to rule-based:', e);
+        }
+    }
+
+    // Rule-based fallback (if LLM failed or in normal mode)
+    if (G.aiMode === 'normal' || !chosen) {
+        if (mustPlay) {
+            chosen = aiFindBestPlay(hand);
+        } else {
+            chosen = findBestPlay(hand, G.lastRealPlay.pattern);
+        }
     }
 
     // 安全检查：过滤掉任何 undefined 的牌（防止 findBeat* 函数返回异常值）
@@ -798,6 +957,14 @@ async function doAIPlay(playerId) {
             G.passCount = 0;
             clearAllLastPlays();
         }
+
+        // Record for LLM history
+        G.pastRounds.push({
+            player: playerId,
+            playerName: NAMES[playerId],
+            cards: [],
+            pattern: { type: 'pass' }
+        });
     } else {
         const pattern = detectPattern(chosen);
         if (!pattern) {
@@ -825,6 +992,14 @@ async function doAIPlay(playerId) {
 
         showLastPlay(playerId, chosen, false);
         renderAIHand(playerId, hand.length);
+
+        // Record for LLM history
+        G.pastRounds.push({
+            player: playerId,
+            playerName: NAMES[playerId],
+            cards: [...chosen],
+            pattern: pattern
+        });
     }
 }
 

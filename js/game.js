@@ -48,12 +48,20 @@ const BGM_TRACKS = [
 
 let bgmIndex = 0;
 let bgmAudio = null;
-let bgmEnabled = false;
+let bgmEnabled = true;
 
 function initBGM() {
   bgmAudio = new Audio(BGM_TRACKS[bgmIndex].src);
   bgmAudio.loop = true;
   bgmAudio.volume = 0.35;
+
+  if (bgmEnabled) {
+    bgmAudio.play().catch(() => {
+      // 浏览器通常会拦截没有用户交互的自动播放
+      bgmEnabled = false;
+      updateBGMBtn();
+    });
+  }
   updateBGMBtn();
 }
 

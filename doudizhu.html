@@ -11,15 +11,23 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&display=swap"
         rel="stylesheet" />
-    <link rel="stylesheet" href="doudizhu.css" />
+    <link rel="stylesheet" href="css/doudizhu.css" />
 </head>
 
 <body>
     <div class="table-bg"></div>
     <div class="vignette"></div>
 
-    <!-- 返回大厅 -->
-    <button class="btn-back" onclick="goLobby()" aria-label="返回大厅">← 大厅</button>
+    <!-- 导航栏 -->
+    <div class="nav-bar">
+        <button class="btn-back" onclick="goLobby()" aria-label="返回大厅">← 大厅</button>
+        <button class="btn-pause" id="btnPause" onclick="togglePause()" aria-label="暂停游戏">暂停</button>
+        <div class="ai-mode-toggle" id="aiModeToggle">
+            <div class="mode-option active" data-mode="normal" onclick="setAiMode('normal')">普通</div>
+            <div class="mode-option" data-mode="master" onclick="setAiMode('master')">大师</div>
+            <div class="mode-slider"></div>
+        </div>
+    </div>
 
     <!-- 规则按钮 -->
     <div class="rules-toggle" onclick="toggleRules()" aria-label="游戏规则">?</div>
@@ -74,15 +82,15 @@
                         <span class="score-val" id="myScore">0</span>
                     </div>
                 </div>
-            </div>
-
-            <!-- 中央信息面板（只保留轮次提示和底牌，底牌出牌后会移到左侧） -->
-            <div class="center-panel">
-                <!-- 底牌区（出牌开始后移到左侧） -->
-                <div class="kitty-area" id="kittyArea">
+                <!-- 底牌区（常驻左侧） -->
+                <div class="kitty-area kitty-left" id="kittyArea">
                     <div class="kitty-label">底牌</div>
                     <div class="kitty-cards" id="kittyCards"></div>
                 </div>
+            </div>
+
+            <!-- 中央信息面板（已清空，可作为弹性占位或后续需要时使用） -->
+            <div class="center-panel">
             </div>
 
             <!-- AI 玩家1（右家） -->
@@ -183,7 +191,7 @@
         </div>
     </div>
 
-    <script src="doudizhu.js"></script>
+    <script src="js/doudizhu.js"></script>
 </body>
 
 </html>

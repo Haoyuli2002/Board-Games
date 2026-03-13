@@ -141,11 +141,6 @@ DeepSeek_API_KEY=sk-72280df5f63242d3b68f4e3c7089eefe
 #### 3️⃣ 启动后端服务
 
 ```bash
-# 推荐：一键启动
-cd backend
-./start_server.sh
-
-# 或手动启动
 cd backend
 source venv/bin/activate
 python server.py

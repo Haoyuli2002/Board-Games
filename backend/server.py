@@ -24,11 +24,11 @@ client = AsyncOpenAI(
 app = FastAPI()
 print("\n✅ [AI Server] 启动成功，当前版本：独立实体人物强化版 (含 last_play_text 修复)", flush=True)
 
-# Allow CORS for local frontend testing
+# Allow ALL origins for local development (supports file:// and local IP)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this in production
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # Set to False when allow_origins is ["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )

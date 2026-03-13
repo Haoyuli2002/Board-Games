@@ -293,6 +293,7 @@ async function loadVoiceMapping() {
 async function playVoice(text, playerId) {
     if (!audioEnabled || !aiDialogueEnabled) return Promise.resolve();
 
+    console.log(`[TTS Debug] Starting TTS request for player ${playerId}: "${text}"`);
     try {
         const response = await fetch('http://127.0.0.1:5000/api/tts', {
             method: 'POST',
@@ -303,12 +304,17 @@ async function playVoice(text, playerId) {
         if (response.ok) {
             const data = await response.json();
             if (data.audio_base64) {
+                console.log(`[TTS Debug] Received audio data (${data.audio_base64.length} chars)`);
                 // Await audio to finish
                 await playBase64Audio(data.audio_base64);
+            } else {
+                console.warn('[TTS Debug] No audio_base64 in response');
             }
+        } else {
+            console.error(`[TTS Debug] Server returned status ${response.status}`);
         }
     } catch (e) {
-        console.warn('TTS请求失败:', e);
+        console.warn('[TTS Debug] Fetch failed:', e);
     }
 }
 
@@ -432,29 +438,34 @@ function playBase64Audio(base64Data) {
     return new Promise((resolve) => {
         if (!base64Data) return resolve();
         if (!audioEnabled || !aiDialogueEnabled) {
-            console.log('语音播放被禁用');
+            console.log('[TTS Debug] Audio playback skipped: disabled');
             return resolve();
         }
         try {
-            const audioSrc = 'data:audio/mp3;base64,' + base64Data;
+            console.log('[TTS Debug] Creating audio element');
+            const audioSrc = 'data:audio/mpeg;base64,' + base64Data;
             const audio = new Audio(audioSrc);
             audio.volume = G.voiceVolume; // 使用全局音量设置
 
-            audio.onended = resolve;
+            audio.onplay = () => console.log('[TTS Debug] Audio playback started');
+            audio.onended = () => {
+                console.log('[TTS Debug] Audio playback ended');
+                resolve();
+            };
             audio.onerror = (e) => {
-                console.warn('Audio playback error:', e);
+                console.warn('[TTS Debug] Audio playback error:', e);
                 resolve();
             };
 
             const p = audio.play();
             if (p && typeof p.catch === 'function') {
                 p.catch(err => {
-                    console.warn('Base64 TTS播放失败:', err.message);
+                    console.warn('[TTS Debug] audio.play() promise failed:', err.message);
                     resolve();
                 });
             }
         } catch (e) {
-            console.warn('Base64 audio decode error:', e);
+            console.warn('[TTS Debug] playBase64Audio internal error:', e);
             resolve();
         }
     });

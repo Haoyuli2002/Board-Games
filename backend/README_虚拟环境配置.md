@@ -18,7 +18,7 @@
 
 ```env
 # 将下面的密钥替换为您的实际DeepSeek API密钥
-DeepSeek_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+DeepSeek_API_KEY=sk-72280df5f63242d3b68f4e3c7089eefe
 ```
 
 **获取DeepSeek API密钥：**
@@ -61,11 +61,11 @@ INFO:     Uvicorn running on http://127.0.0.1:5000 (Press CTRL+C to quit)
 ```
 backend/
 ├── venv/                 # Python虚拟环境
-├── server.py            # 主服务器文件
-├── requirements.txt     # 依赖清单
-├── .env                 # API密钥配置
-├── start_server.sh      # 启动脚本
-└── README_虚拟环境配置.md # 本说明文件
+├── server.py             # 主服务器文件
+├── requirements.txt      # 依赖清单
+├── .env                  # API密钥配置
+├── start_server.sh       # 启动脚本
+└── README_虚拟环境配置.md  # 本说明文件
 ```
 
 ## 🐛 常见问题

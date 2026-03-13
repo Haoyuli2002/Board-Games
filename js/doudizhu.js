@@ -225,6 +225,7 @@ const AVATAR_MAP = {
     }
 };
 
+
 // 移除本地语音音源映射，全面使用 Edge TTS
 const VOICE_MAPPINGS = null;
 
@@ -330,13 +331,19 @@ let isBgmPlaying = false;
 
 function toggleDoudizhuBgm() {
     isBgmPlaying = !isBgmPlaying;
-    const span = document.querySelector('#doudizhuBgmBtn span');
+    const label = document.getElementById('bgmLabel');
     if (isBgmPlaying) {
         doudizhuBgm.play().catch(() => { });
-        if (span) { span.textContent = 'ON'; span.style.color = '#4ade80'; }
+        if (label) {
+            label.textContent = 'BGM ON';
+            label.style.color = '#4ade80';
+        }
     } else {
         doudizhuBgm.pause();
-        if (span) { span.textContent = 'OFF'; span.style.color = ''; }
+        if (label) {
+            label.textContent = 'BGM OFF';
+            label.style.color = '';
+        }
     }
 }
 
@@ -956,6 +963,8 @@ async function startGame() {
         sortDescending: G.sortDescending !== undefined ? G.sortDescending : true,
         isPaused: G.isPaused || false,
         aiMode: G.aiMode || 'normal',
+        bgmVolume: G.bgmVolume !== undefined ? G.bgmVolume : 0.5,
+        voiceVolume: G.voiceVolume !== undefined ? G.voiceVolume : 0.8,
         pastRounds: []
     };
 
@@ -1789,11 +1798,21 @@ window.addEventListener('load', () => {
             G.voiceVolume = parseFloat(e.target.value);
         };
     }
-
     // Attempt Auto-play BGM
     doudizhuBgm.play().then(() => {
         isBgmPlaying = true;
-        const span = document.querySelector('#doudizhuBgmBtn span');
-        if (span) { span.textContent = 'ON'; span.style.color = '#4ade80'; }
+        const label = document.getElementById('bgmLabel');
+        if (label) {
+            label.textContent = 'BGM ON';
+            label.style.color = '#4ade80';
+        }
     }).catch(() => { });
 });
+
+// 切换音量控制面板显示 (抽屉式)
+function toggleVolumePanel() {
+    const panel = document.getElementById('volumeControls');
+    if (panel) {
+        panel.classList.toggle('visible');
+    }
+}

@@ -349,6 +349,53 @@ body {
     letter-spacing: 1px;
 }
 
+/* AI Personal Insight Tooltip */
+.insight-tooltip {
+    position: absolute;
+    bottom: 120%;
+    /* Position above the avatar */
+    left: 50%;
+    transform: translateX(-50%) translateY(10px) scale(0.9);
+    width: 220px;
+    background: rgba(42, 24, 16, 0.95);
+    /* Deep wood theme */
+    backdrop-filter: blur(12px);
+    border: 1.5px solid var(--gold);
+    border-radius: 12px;
+    padding: 12px;
+    color: #fef3c7;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 2000;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 15px rgba(251, 191, 36, 0.2);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.player-avatar:hover .insight-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+}
+
+/* Adjustments for Top AI (Xiaoyi) */
+.zone-top .insight-tooltip {
+    top: 120%;
+    bottom: auto;
+    transform: translateX(-50%) translateY(-10px) scale(0.9);
+}
+
+.zone-top .player-avatar:hover .insight-tooltip {
+    transform: translateX(-50%) translateY(0) scale(1);
+}
+
+/* Adjustments for Right AI (Yunxi) */
+.player-zone.zone-right .insight-tooltip {
+    /* Centered is usually fine, but ensure no clipping */
+    max-width: 238px;
+}
+
 .role-badge {
     font-size: 0.65rem;
     font-weight: 700;
@@ -1272,89 +1319,136 @@ body {
 }
 
 /* ========================
-   VOLUME CONTROLS (Vertical Sliders)
+   VOLUME CONTROLS (Vertical Sliders - Drawer Style)
    ======================== */
 .volume-controls {
     position: fixed;
-    left: 20px;
+    left: 0;
     top: 50%;
-    transform: translateY(-50%);
+    /* 初始平衡：隐藏两个 55px 宽的 item (共 110px) */
+    transform: translateY(-50%) translateX(-110px);
     display: flex;
-    flex-direction: column;
-    gap: 30px;
-    z-index: 1000;
-    padding: 20px 10px;
-    background: rgba(15, 23, 42, 0.4);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 30px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+    z-index: 2000;
+    /* 提升层级，确保在最上层 */
+    padding: 10px 0;
+    background: rgba(42, 24, 16, 0.95);
+    backdrop-filter: blur(15px);
+    border: 1.5px solid var(--gold);
+    border-left: none;
+    border-radius: 0 15px 15px 0;
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.8);
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+}
+
+.volume-controls.visible {
+    transform: translateY(-50%) translateX(0);
+}
+
+.volume-handle {
+    width: 32px;
+    height: 70px;
+    background: linear-gradient(to right, #451a03, #78350f, #451a03);
+    border-left: 1px solid rgba(253, 230, 138, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 0 8px 8px 0;
+    margin-left: 0;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s;
+    user-select: none;
+    order: 2;
+    /* 核心：确保把手在右侧，作为贴边拉手 */
+}
+
+.volume-handle:hover {
+    filter: brightness(1.2);
+    width: 36px;
+    /* 悬停时稍微加宽，增加诱导感 */
+}
+
+.handle-icon {
+    font-size: 1.2rem;
+    color: var(--gold);
+    transition: transform 0.5s;
+    filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5));
+}
+
+.volume-controls.visible .handle-icon {
+    transform: rotate(180deg);
 }
 
 .volume-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    width: 55px;
+    /* 这里固定宽度，对应 translateX(-110px) */
+    padding: 10px 0;
+    order: 1;
+    /* Sliders 在左侧 */
 }
 
 .volume-icon {
-    font-size: 1.2rem;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-    cursor: default;
-    user-select: none;
+    font-size: 1rem;
+    color: var(--gold);
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.5));
 }
 
-/* Vertical Slider Styling */
+/* Vertical Slider Styling - Unified Game Gold */
 .volume-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 6px;
-    height: 120px;
-    background: rgba(255, 255, 255, 0.1);
+    width: 4px;
+    height: 90px;
+    background: rgba(0, 0, 0, 0.6);
     outline: none;
-    border-radius: 3px;
+    border-radius: 2px;
     cursor: pointer;
-    /* This is for cross-browser vertical support */
     writing-mode: bt-lr;
-    /* IE, Old Edge */
     -webkit-appearance: slider-vertical;
-    /* Webkit */
+    border: 1px solid var(--gold);
+    /* 使用统一的金边 */
 }
 
 .volume-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #fde68a, #fbbf24);
-    border: 2px solid #92400e;
-    cursor: pointer;
-    box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    /* 使用游戏标准的黄金渐变 */
+    background: linear-gradient(135deg, #fde68a, #fbbf24, #d97706);
+    border: 2px solid #451a03;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .volume-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-    box-shadow: 0 0 15px rgba(251, 191, 36, 0.6);
+    transform: scale(1.3);
+    box-shadow: 0 0 15px rgba(251, 191, 36, 0.9);
 }
 
 .volume-slider::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #fde68a, #fbbf24);
-    border: 2px solid #92400e;
-    cursor: pointer;
-    box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: linear-gradient(135deg, #fde68a, #fbbf24, #d97706);
+    border: 2px solid #451a03;
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+    transition: transform 0.2s;
 }
 
 .volume-slider::-moz-range-track {
-    width: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
+    width: 4px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--gold);
+    border-radius: 2px;
 }
 
 @media (max-width: 600px) {

@@ -759,14 +759,24 @@ function makeCardBack() {
     return el;
 }
 
-function renderAIHand(playerId, count) {
+function renderAIHand(playerId, cardsOrCount, reveal = false) {
     const el = $(`hand-ai${playerId}`);
     el.innerHTML = '';
-    for (let i = 0; i < count; i++) {
-        el.appendChild(makeCardBack());
+
+    if (reveal && Array.isArray(cardsOrCount)) {
+        // 游戏结束展示亮牌
+        const sorted = sortCards(cardsOrCount);
+        sorted.forEach(card => el.appendChild(makeCard(card, 'sm')));
+        const countEl = $(`ai${playerId}CardCount`);
+        if (countEl) countEl.textContent = sorted.length;
+    } else {
+        const count = typeof cardsOrCount === 'number' ? cardsOrCount : cardsOrCount.length;
+        for (let i = 0; i < count; i++) {
+            el.appendChild(makeCardBack());
+        }
+        const countEl = $(`ai${playerId}CardCount`);
+        if (countEl) countEl.textContent = count;
     }
-    const countEl = $(`ai${playerId}CardCount`);
-    if (countEl) countEl.textContent = count;
 }
 
 /**
@@ -1774,7 +1784,9 @@ async function endGame(winner) {
     G.totalScore += scoreDelta;
 
     // Final render (show all hands)
-    if (G.landlord !== PLAYER) renderPlayerHand();
+    renderPlayerHand();
+    renderAIHand(1, G.hands[1], true);
+    renderAIHand(2, G.hands[2], true);
 
     await sleep(600);
 

@@ -754,6 +754,8 @@ function renderAIHand(playerId, count) {
     for (let i = 0; i < count; i++) {
         el.appendChild(makeCardBack());
     }
+    const countEl = $(`ai${playerId}CardCount`);
+    if (countEl) countEl.textContent = count;
 }
 
 /**
@@ -762,7 +764,7 @@ function renderAIHand(playerId, count) {
  */
 async function getLLMDecision(context) {
     const pfx = context.playerId === AI1 ? 'AI1' : 'AI2';
-    setTurnIndicator(`${NAMES[context.playerId]} 正在思考大局...`, false);
+    setTurnIndicator(`${NAMES[context.playerId]} 出牌中...`, false);
 
     try {
         const response = await fetch('http://127.0.0.1:5000/api/ai-play', {
@@ -1767,9 +1769,10 @@ async function endGame(winner) {
 
     const isWin = scoreDelta > 0;
     const emoji = isWin ? '🎉' : '😞';
-    const title = isWin ? '你赢了！' : '你输了';
+    const title = isWin ? '恭喜！小明赢了' : '抱歉，小明输了';
+    const winnerName = (winner === PLAYER) ? '小明' : NAMES[winner];
     const roleStr = NAMES[G.landlord] + '是地主';
-    const winnerStr = NAMES[winner] + '先出完牌';
+    const winnerStr = winnerName + '赢得了本局';
     const sub = `${roleStr}｜${winnerStr}`;
 
     $('resultEmoji').textContent = emoji;

@@ -79,20 +79,24 @@ AI_NAMES = {
     2: "晓伊"
 }
 
-def get_system_prompt(player_id, is_landlord):
+def get_system_prompt(player_id, is_landlord, phase="playing"):
     name = AI_NAMES.get(player_id, f"AI {player_id}")
     other_ai_id = 2 if player_id == 1 else 1
     other_ai_name = AI_NAMES.get(other_ai_id)
     
     if player_id == 1: # 云希
         base = "你叫云希，是一位豪爽阔达、自信直率的古风侠客，说话带有豪迈侠气。"
-        if is_landlord:
-            personality = "现在你是地主，独自对抗农民。你变得极其狂妄、自大，视对手如无物，台词应充满嘲讽和压迫感。"
+        if phase == "bidding":
+            personality = "现在是叫号（抢地主）环节。一旦你叫分胜出，你将成为【地主】，独自一人对抗两个农民（小明和晓伊）。如果你不想承担风险，可以不叫分。"
+        elif is_landlord:
+            personality = "现在你是地主，独自对抗两个农民。你变得极其狂妄、自大，视对手如无物，台词应充满嘲讽和压迫感。"
         else:
             personality = f"现在你是农民。你正与队友（农民 {other_ai_name}）并肩作战对抗地主。台词应展现侠肝义胆和团队协作。"
     else: # 晓伊
         base = "你叫晓伊，是一位温婉聪慧、睿智从容的古风少女，性格里带着一丝灵动和俏皮。"
-        if is_landlord:
+        if phase == "bidding":
+            personality = "现在是叫号（抢地主）环节。一旦你叫分胜出，你将成为【地主】，独自一人对抗两个农民（小明和云希）。请根据手牌智慧决策。"
+        elif is_landlord:
             personality = "现在你是地主。你变得腹黑、高傲、优雅地嘲讽，视对手为股掌间的玩物，台词带着掌控全局的冷淡感。"
         else:
             personality = f"现在你是农民。你正与队友（农民 {other_ai_name}）共商破敌之策。台词应从容优雅，展现智谋。"
@@ -173,7 +177,13 @@ async def text_to_speech_base64(text: str, player_id: int = 1) -> str:
     
     try:
         voice = TTS_VOICES.get(player_id, "zh-CN-YunxiNeural")
-        communicate = edge_tts.Communicate(text, voice, rate="+10%")
+        # 优化：为不同性格定制语速和语调
+        # 云希 (Male): 稍微低沉一点，表现侠客风范
+        # 晓伊 (Female): 稍微灵动一点
+        rate = "+10%" if player_id == 2 else "+5%"
+        pitch = "+0Hz" if player_id == 1 else "+2Hz" 
+        
+        communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
         
         # Collect audio bytes
         audio_bytes = io.BytesIO()
@@ -241,7 +251,7 @@ async def get_ai_decision(request: AIRequest):
             else:
                 valid_bids = [0] + list(range(min_valid_bid, max_valid_bid + 1))
             
-            system_prompt = get_system_prompt(request.playerId, False)
+            system_prompt = get_system_prompt(request.playerId, False, phase="bidding")
             
             prompt = f"""当前阶段：叫地主
 你的手牌：{json.dumps(request.hand, ensure_ascii=False)}
@@ -269,7 +279,10 @@ async def get_ai_decision(request: AIRequest):
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
+                temperature=1.3,
+                frequency_penalty=1.0,
+                presence_penalty=0.6
             )
             content = response.choices[0].message.content
             resp_json = json.loads(content)
@@ -289,7 +302,14 @@ async def get_ai_decision(request: AIRequest):
 
         # Phase 2: Playing
         elif request.phase == "playing":
-            last_play_text = json.dumps(request.lastRealPlay, ensure_ascii=False) if request.lastRealPlay else "无（你是首出）"
+            # 优化提示词：将上家出牌格式化为人类易读的文字，提升大模型策略理解
+            last_play_cards = request.lastRealPlay.get("cards", []) if request.lastRealPlay else []
+            if last_play_cards:
+                cards_readable = ",".join([c.get('rank', '') for c in last_play_cards])
+                last_play_desc = f"玩家 {request.lastRealPlay.get('player')} 出了 [{cards_readable}]"
+            else:
+                last_play_desc = "无（你是首出）"
+
             is_landlord = (request.playerId == request.landlordId)
             role_text = "地主" if is_landlord else "农民"
             
@@ -301,7 +321,7 @@ async def get_ai_decision(request: AIRequest):
             
             teammate_caution = ""
             if last_player_is_teammate:
-                teammate_caution = "\n特别注意：上家出的牌是你的队友（另一个农民）出的。你可以选择Pass让他走牌，但如果你手里的牌更好或者想通过接管比赛来改变节奏，请果断压住。"
+                teammate_caution = "\n特别注意：上家出的牌是你的队友（另一个农民）出的。如果队友的牌很大且能确保继续掌控出牌权，你可以选择Pass；但如果你手里有能更快跑掉的牌型，或者你想通过接管出牌权来改变节奏（比如队友在出单张而你有对子），请果断压住队友，接管比赛。不要总是让牌！"
             
             landlord_role_desc = "你是地主，独自对抗两个农民。" if is_landlord else f"你是农民，与另一个农民配合对抗玩家 {request.landlordId}（地主）。"
             
@@ -333,18 +353,18 @@ async def get_ai_decision(request: AIRequest):
             prompt = f"""当前阶段：出牌
 你的手牌：{json.dumps(request.hand, ensure_ascii=False)}
 是否必须出牌：{"是" if request.mustPlay else "否"}{must_play_warning}
-需要压过的牌型：{last_play_text}{teammate_caution}
+需要压过的牌：{last_play_desc}{teammate_caution}
 历史记录（从最近到过去）：
 {chr(10).join(formatted_history[:10])}
 
 出牌规则与策略：
 1. **首要目标**：赢得比赛！不管是地主还是农民，你的任务是把牌出完。
-2. **进攻性**：作为大师级别AI，你应该尽可能掌控出牌权。不要盲目Pass。
+2. **主动性**：作为大师级别AI，你应该尽可能掌控出牌权。严禁在有能力接管比赛时盲目选择“不要（Pass）”。
 3. **农民配合**：
-   - 如果上家出的牌是你的队友出的：{teammate_caution}
-   - 如果队友出的牌已经足够压制地主，你可以选择Pass；但如果队友牌比较小，或者地主（玩家0）已经Pass了，你应该果断接过来。
-4. **管牌逻辑**：如果有能力管上家的牌且有助于你跑掉手里的弱牌，请果断管牌。
-5. **台词要求**：**20 字以内**，必须是对外交流（对小明或队友说的话），严禁重复，严禁描述心理活动。
+   - 队友（农民）出牌时，如果你手中的牌更顺或者更有把握连出，请果断接过来。
+   - 如果地主（小明）Pass了，你作为农民必须尽力压住队友的小牌，由你来重新发牌，绝不能让出牌权白白回到地主手中。
+4. **管牌逻辑**：要有预见性。如果地主报牌（剩余牌少），必须不惜一切代价（炸弹等）管住地主。
+5. **台词要求**：**20 字以内**，必须是对外交流（对小明或队友说的话），不要重复之前说过的台词，严禁描述心理活动。
 
 请做出决策，必须返回以下JSON格式：
 - 不要：{{"action": "pass", "dialogue": "台词"}}
@@ -358,7 +378,10 @@ async def get_ai_decision(request: AIRequest):
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
+                temperature=1.3,
+                frequency_penalty=1.0,
+                presence_penalty=0.6
             )
             content = response.choices[0].message.content
             resp_json = json.loads(content)

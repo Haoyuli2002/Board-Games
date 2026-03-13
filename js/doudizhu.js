@@ -266,22 +266,26 @@ function toggleAIDialogue() {
 function _unlockAudioOnce() {
     if (audioUnlocked) return;
     audioUnlocked = true;
+    audioEnabled = true; // 只要用户有任何互动，就允许播放音频（支持开局前的聊天语音）
 
     // 预创建无声片段以激活浏览器的音频上下文
-    const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
-    silentAudio.play().catch(() => { });
+    try {
+        const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+        silentAudio.play().catch(() => { });
+    } catch (e) {
+        console.warn('音频解锁失败:', e);
+    }
 
-    console.log('音频系统已通过用户交互解锁');
+    console.log('音频系统已通过用户交互解锁并激活');
 }
 document.addEventListener('mousedown', _unlockAudioOnce, { once: true });
 document.addEventListener('touchstart', _unlockAudioOnce, { once: true });
 document.addEventListener('keydown', _unlockAudioOnce, { once: true });
 
-// 初始化音频系统（游戏开始时调用）
+// 初始化音频系统（游戏开始时调用，保留作兼容）
 function initAudioSystem() {
-    _unlockAudioOnce();   // 确保在按钮点击上下文中运行
-    audioEnabled = true;
-    console.log('音频系统已激活');
+    _unlockAudioOnce();
+    console.log('音频系统确认已就绪');
 }
 
 // 加载语音映射文件（内嵌映射已就绪，此函数保留作兼容用途）
@@ -544,6 +548,11 @@ async function showAIDialogue(playerId, dialogue, skipVoice = false) {
     // 播放语音并等待读完（Edge TTS 实时生成）
     if (!skipVoice) {
         await playVoice(dialogue, playerId);
+    }
+
+    // 实时更新历史记录面板 (如果打开着)
+    if ($('historyPanel').classList.contains('open')) {
+        updateHistoryUI();
     }
 }
 
@@ -1850,6 +1859,16 @@ window.addEventListener('load', () => {
             G.voiceVolume = parseFloat(e.target.value);
         };
     }
+    // 绑定聊天输入框回车事件
+    const chatInput = $('chatInput');
+    if (chatInput) {
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendPlayerChat();
+            }
+        });
+    }
+
     // Attempt Auto-play BGM
     doudizhuBgm.play().then(() => {
         isBgmPlaying = true;
@@ -1868,3 +1887,296 @@ function toggleVolumePanel() {
         panel.classList.toggle('visible');
     }
 }
+
+const NORMAL_MODE_CHAT = {
+    [AI1]: [
+        "兄台好兴致",
+        "无须多言，手下见真章。",
+        "好风光，好对手，痛快！",
+        "阁下出招不凡，云希领教了。"
+    ],
+    [AI2]: [
+        "晓伊可是不会手下留情的哦。",
+        "小明是在夸我吗？接稳了。",
+        "别只顾着聊天，小心手里剩下的牌哦。",
+        "温婉从容，方能克敌制胜。"
+    ]
+};
+
+/**
+ * 发送玩家聊天内容
+ */
+async function sendPlayerChat() {
+    const input = $('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    if (text.length > 20) {
+        alert('对话内容不能超过20个字');
+        return;
+    }
+
+    input.value = '';
+
+    // 展示气泡
+    showAIDialogue(PLAYER, text, true);
+
+    // 将玩家话语记录到全局历史
+    G.pastRounds.push({
+        player: PLAYER,
+        playerName: NAMES[PLAYER],
+        cards: [],
+        pattern: { type: 'chat' },
+        dialogue: text
+    });
+
+    console.log(`[Chat] 玩家说: ${text}`);
+
+    if (G.aiMode === 'master') {
+        // 大师模式：调用 LLM
+        setTimeout(async () => {
+            // 云希先说
+            await requestAIChat(AI1, text);
+            // 停顿 400ms 更自然
+            await new Promise(r => setTimeout(r, 400));
+            // 晓伊再说
+            await requestAIChat(AI2, text);
+        }, 500);
+    } else {
+        // 普通模式：使用预设随机台词
+        setTimeout(async () => {
+            // 云希先说
+            const lines1 = NORMAL_MODE_CHAT[AI1];
+            const line1 = lines1[Math.floor(Math.random() * lines1.length)];
+            showAIDialogue(AI1, line1, true);
+            await playVoice(line1, AI1);
+
+            // 记录到历史
+            G.pastRounds.push({
+                player: AI1,
+                playerName: NAMES[AI1],
+                cards: [],
+                pattern: { type: 'chat' },
+                dialogue: line1
+            });
+            updateHistoryUI();
+
+            // 停顿 400ms
+            await new Promise(r => setTimeout(r, 400));
+
+            // 晓伊再说
+            const lines2 = NORMAL_MODE_CHAT[AI2];
+            const line2 = lines2[Math.floor(Math.random() * lines2.length)];
+            showAIDialogue(AI2, line2, true);
+            await playVoice(line2, AI2);
+
+            // 记录到历史
+            G.pastRounds.push({
+                player: AI2,
+                playerName: NAMES[AI2],
+                cards: [],
+                pattern: { type: 'chat' },
+                dialogue: line2
+            });
+            updateHistoryUI();
+        }, 500);
+    }
+}
+
+/**
+ * 请求特定 AI 进行聊天回复
+ */
+async function requestAIChat(playerId, playerMessage) {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/api/ai-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                playerId: playerId,
+                playerMessage: playerMessage,
+                landlordId: G.landlord,
+                pastRounds: G.pastRounds
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.dialogue) {
+                // 显示气泡
+                showAIDialogue(playerId, data.dialogue, true);
+                if (data.audio_base64) {
+                    await playBase64Audio(data.audio_base64);
+                }
+
+                // 记录 AI 的聊天到全局历史，以便另一个 AI 感知
+                G.pastRounds.push({
+                    player: playerId,
+                    playerName: NAMES[playerId],
+                    cards: [],
+                    pattern: { type: 'chat' },
+                    dialogue: data.dialogue
+                });
+            }
+        }
+    } catch (e) {
+        console.warn(`AI ${playerId} 聊天回复失败:`, e);
+    }
+}
+
+/**
+ * 切换历史面板显示且指定标签
+ */
+function toggleHistoryWithTab(tabName) {
+    const el = $('historyPanel');
+    const isOpening = !el.classList.contains('open');
+
+    // 如果是打开，或者面板已经开着但我要切标签
+    if (isOpening) {
+        el.classList.add('open');
+        switchSidePanelTab(tabName);
+    } else {
+        // 如果面板已经开了
+        const historyTabActive = $('tab-history').classList.contains('active');
+        const targetIsHistory = (tabName === 'history');
+
+        // 如果点的是当前没打开的那个标签，就切过去，不关闭面板
+        if (historyTabActive !== targetIsHistory) {
+            switchSidePanelTab(tabName);
+        } else {
+            // 如果点的是当前已经在看的标签，就关闭面板
+            el.classList.remove('open');
+        }
+    }
+}
+
+/**
+ * 切换历史记录面板
+ */
+function toggleHistoryPanel() {
+    const el = $('historyPanel');
+    el.classList.toggle('open');
+    if (el.classList.contains('open')) {
+        updateHistoryUI();
+    }
+}
+
+/**
+ * 更新历史记录 UI
+ */
+function updateHistoryUI() {
+    const container = $('historyContent');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // 筛选出所有含有对话的内容 (包括出牌附带的对话和纯聊天)
+    const dialogues = G.pastRounds.filter(r => r.dialogue && r.dialogue.trim());
+
+    if (dialogues.length === 0) {
+        container.innerHTML = '<div style="text-align:center; opacity:0.3; margin-top:40px;">暂无对话记录</div>';
+        return;
+    }
+
+    dialogues.forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        if (r.player === PLAYER) item.classList.add('player');
+        else if (r.player === 1) item.classList.add('ai1');
+        else if (r.player === 2) item.classList.add('ai2');
+
+        const roleName = NAMES[r.player] || `玩家 ${r.player}`;
+
+        item.innerHTML = `
+            <div class="history-name">${roleName} 说：</div>
+            <div class="history-text">${r.dialogue}</div>
+        `;
+        container.appendChild(item);
+    });
+
+    // 滚动到底部
+    container.scrollTop = container.scrollHeight;
+}
+
+/**
+ * 切换侧边栏标签 (对话历史 vs 人物志)
+ * @param {string} tabName 'history' | 'characters'
+ */
+function switchSidePanelTab(tabName) {
+    const historyTab = $('tab-history');
+    const charactersTab = $('tab-characters');
+    const historyContent = $('historyContent');
+    const charactersContent = $('charactersContent');
+
+    if (!historyTab || !charactersTab || !historyContent || !charactersContent) return;
+
+    if (tabName === 'history') {
+        historyTab.classList.add('active');
+        charactersTab.classList.remove('active');
+        historyContent.style.display = 'flex';
+        charactersContent.style.display = 'none';
+        updateHistoryUI(); // 切换回来时刷新一下
+    } else {
+        historyTab.classList.remove('active');
+        charactersTab.classList.add('active');
+        historyContent.style.display = 'none';
+        charactersContent.style.display = 'block';
+    }
+}
+
+/**
+ * 使元素可拖动
+ * @param {HTMLElement} el 要拖动的元素
+ * @param {HTMLElement} handle 拖动手柄
+ */
+function initDraggable(el, handle) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+    handle.onmousedown = dragMouseDown;
+
+    function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        // 获取鼠标初始位置
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+
+        el.classList.add('dragging');
+    }
+
+    function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        // 计算偏移量
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+
+        // 设置新位置
+        // 拖动时切换到 top/left 定位以防 bottom/right 干扰
+        const rect = el.getBoundingClientRect();
+        el.style.bottom = 'auto';
+        el.style.right = 'auto';
+        el.style.top = (el.offsetTop - pos2) + "px";
+        el.style.left = (el.offsetLeft - pos1) + "px";
+    }
+
+    function closeDragElement() {
+        // 停止移动
+        document.onmouseup = null;
+        document.onmousemove = null;
+        el.classList.remove('dragging');
+    }
+}
+
+// 初始化对话框拖动
+window.addEventListener('load', () => {
+    const chatArea = $('chatArea');
+    const chatHandle = $('chatDragHandle');
+    if (chatArea && chatHandle) {
+        initDraggable(chatArea, chatHandle);
+    }
+});

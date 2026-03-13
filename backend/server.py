@@ -222,7 +222,7 @@ async def get_ai_decision(request: AIRequest):
             else:
                 valid_bids = [0] + list(range(min_valid_bid, max_valid_bid + 1))
             
-            system_prompt = get_system_prompt(request.playerId, False, phase="bidding")
+            system_prompt = get_system_prompt(request.playerId, False, landlord_id=request.landlordId, phase="bidding")
             
             prompt = get_bidding_prompt(request.hand, request.maxBid if request.maxBid else 0, valid_bids)
             
@@ -273,7 +273,7 @@ async def get_ai_decision(request: AIRequest):
             if request.mustPlay:
                 must_play_warning = "\n⚠️ 绝对指令：当前你获得了出牌权。你必须从手牌中选择牌打出，严禁选择“不要”（pass）。"
 
-            system_prompt = get_system_prompt(request.playerId, is_landlord)
+            system_prompt = get_system_prompt(request.playerId, is_landlord, landlord_id=request.landlordId)
             
             # 同步历史记录到 Agent
             sync_agent_history(agent, request)
@@ -325,6 +325,51 @@ async def get_ai_decision(request: AIRequest):
     except Exception as e:
         print("Error calling DeepSeek API:", e)
         return {"error": str(e), "decision": "FALLBACK", "dialogue": ""}
+
+class ChatRequest(BaseModel):
+    playerId: int
+    playerMessage: str
+    landlordId: int
+    pastRounds: List[dict]
+
+@app.post("/api/ai-chat")
+async def get_ai_chat(request: ChatRequest):
+    print(f"\n[Backend] 收到 AI 聊天请求: Player {request.playerId}, Content: {request.playerMessage}", flush=True)
+    
+    agent = xiaoyi_agent if request.playerId == 2 else yunxi_agent
+    
+    try:
+        # 同步历史记录
+        sync_agent_history(agent, request)
+        
+        is_landlord = (request.playerId == request.landlordId)
+        system_prompt = get_system_prompt(request.playerId, is_landlord, landlord_id=request.landlordId, phase="chat")
+        
+        # 构建历史描述用于 Prompt
+        formatted_history = []
+        for r in request.pastRounds:
+            p_id = r.get("player")
+            p_dialogue = r.get("dialogue", "")
+            name_label = "你(你自己)" if p_id == request.playerId else ("小明" if p_id == 0 else AI_NAMES.get(p_id, f"AI {p_id}"))
+            formatted_history.append(f"{name_label}: \"{p_dialogue}\"")
+        
+        from prompts import get_chat_prompt
+        prompt = get_chat_prompt(request.playerMessage, formatted_history)
+        
+        print(f"DeepSeek 正在调用 (Chat, Player {request.playerId})...", flush=True)
+        resp_json = await agent.get_decision(system_prompt, prompt)
+        
+        dialogue = resp_json.get("dialogue", "...")[:20]
+        audio_base64 = await text_to_speech_base64(dialogue, request.playerId)
+        
+        # 聊天响应也记录到 Agent 的内存中（作为 assistant 的回复）
+        agent.add_message("assistant", f"你 ({'地主' if is_landlord else '农民'}): \"{dialogue}\"")
+        
+        return {"dialogue": dialogue, "audio_base64": audio_base64}
+        
+    except Exception as e:
+        print("Error in AI chat:", e)
+        return {"dialogue": "我现在没空理你。", "audio_base64": ""}
 
 class TTSRequest(BaseModel):
     text: str

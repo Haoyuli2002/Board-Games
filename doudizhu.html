@@ -70,6 +70,9 @@
 
     <!-- 规则按钮 -->
     <div class="rules-toggle" onclick="toggleRules()" aria-label="游戏规则">?</div>
+    <button id="btnHistory" class="btn-side-fixed" onclick="toggleHistoryWithTab('history')" title="查看对话历史">📜</button>
+    <button id="btnCharacters" class="btn-side-fixed" onclick="toggleHistoryWithTab('characters')"
+        title="查看人物志">👤</button>
     <div class="rules-panel" id="rulesPanel">
         <h3>游戏规则</h3>
         <ul>
@@ -212,6 +215,13 @@
                 <button class="start-btn" id="startBtn" onclick="startGame()">开始游戏</button>
             </div>
 
+            <!-- 聊天区 (支持出牌阶段聊天) -->
+            <div class="chat-area" id="chatArea">
+                <div class="chat-drag-handle" id="chatDragHandle" title="按住拖动位置">⠿</div>
+                <input type="text" id="chatInput" placeholder="输入对话内容..." maxlength="20" />
+                <button id="btnChat" onclick="sendPlayerChat()">发送</button>
+            </div>
+
         </div>
 
     </div>
@@ -234,6 +244,57 @@
             <div class="result-btns">
                 <button class="result-btn btn-lobby" onclick="goLobby()">返回大厅</button>
                 <button class="result-btn btn-again" onclick="startGame()">再来一局</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 历史记录面板 -->
+    <div class="history-panel" id="historyPanel">
+        <div class="history-header">
+            <div class="panel-tabs">
+                <div class="panel-tab active" id="tab-history" onclick="switchSidePanelTab('history')">对话历史</div>
+                <div class="panel-tab" id="tab-characters" onclick="switchSidePanelTab('characters')">人物志</div>
+            </div>
+            <button class="close-history" onclick="toggleHistoryPanel()">×</button>
+        </div>
+
+        <!-- 历史对话内容 -->
+        <div class="history-content" id="historyContent">
+            <!-- 历史记录将通过 JS 动态插入 -->
+        </div>
+
+        <!-- AI 人物志内容 -->
+        <div class="characters-content" id="charactersContent" style="display: none;">
+            <!-- 云希简介 -->
+            <div class="char-profile">
+                <div class="char-header">
+                    <img src="assets/avatars/yunxi_farmer.png" class="char-avatar" alt="云希">
+                    <div class="char-meta">
+                        <span class="char-name">云希 (Yunxi)</span>
+                        <span class="char-title">豪爽侠客</span>
+                    </div>
+                </div>
+                <div class="char-desc">
+                    <p><strong>平时性格：</strong>为人豪迈直率，极重江湖义气。无论胜负，言语间总带着一股少年侠气的阔达与潇洒。</p>
+                    <p class="evil-desc"><strong>地主状态（黑化）：</strong>一旦成为地主，侠气化为狂傲。视对手如无物，台词充满了极强的压迫感与唯我独尊的自大。</p>
+                </div>
+            </div>
+
+            <hr class="char-divider">
+
+            <!-- 晓伊简介 -->
+            <div class="char-profile">
+                <div class="char-header">
+                    <img src="assets/avatars/xiaoyi_farmer.png" class="char-avatar" alt="晓伊">
+                    <div class="char-meta">
+                        <span class="char-name">晓伊 (Xiaoyi)</span>
+                        <span class="char-title">聪慧少女</span>
+                    </div>
+                </div>
+                <div class="char-desc">
+                    <p><strong>平时性格：</strong>温婉聪慧，心思缜密，说话灵动且带着一丝俏皮，是团队中值得信赖的智多星。</p>
+                    <p class="evil-desc"><strong>地主状态（黑化）：</strong>化身地主后转为“腹黑”模式。优雅地嘲讽对手，将局面玩弄于股掌之间，透着一股掌控全局的冷静与冷淡。</p>
+                </div>
             </div>
         </div>
     </div>

@@ -39,6 +39,7 @@ class AIAgent:
                 role = m['role'].upper()
                 content = m['content'].replace('\n', ' ')
                 print(f"     [{role}] {content[:100]}{'...' if len(content) > 100 else ''}")
+                # print(f"     [{role}] {content}")
             print("<<<<\n", flush=True)
             
             response = await self.client.chat.completions.create(

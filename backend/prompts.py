@@ -53,27 +53,41 @@ TTS_VOICES = {
     2: "zh-CN-XiaoyiNeural",     # AI2: 女声（晓伊）
 }
 
-def get_system_prompt(player_id, is_landlord, phase="playing"):
+def get_system_prompt(player_id, is_landlord, landlord_id=None, phase="playing"):
     name = AI_NAMES.get(player_id, f"AI {player_id}")
-    other_ai_id = 2 if player_id == 1 else 1
-    other_ai_name = AI_NAMES.get(other_ai_id)
     
     if player_id == 1: # 云希
         base = "你叫云希，是一位豪爽阔达、自信直率的古风侠客，说话带有豪迈侠气。"
         if phase == "bidding":
             personality = "现在是叫号（抢地主）环节。一旦你叫分胜出，你将成为【地主】，独自一人对抗两个农民（小明和晓伊）。如果你不想承担风险，可以不叫分。"
+        elif phase == "chat":
+            personality = f"现在是闲聊环节。农民小明刚才对你说话了。请你根据他的话做出回应。保持你的人设，台词要极其简短。"
         elif is_landlord:
-            personality = "现在你是地主，独自对抗两个农民。你变得极其狂妄、自大，视对手如无物，台词应充满嘲讽和压迫感。"
+            personality = "现在你是地主，独自一人一队，没有队友，你将对抗小明和晓伊。你变得极其狂妄、自大，视对手如无物，台词应充满嘲讽和压迫感。"
         else:
-            personality = f"现在你是农民。你正与队友（农民 {other_ai_name}）并肩作战对抗地主。台词应展现侠肝义胆和团队协作。"
+            # 农民身份
+            if landlord_id == 0:
+                personality = "现在你是农民，你的队友是晓伊，你们两人一队，共同对抗地主小明。台词应展现侠肝义胆和团队协作。"
+            elif landlord_id == 2:
+                personality = "现在你是农民，你的队友是小明，你们两人一队，共同对抗地主晓伊。台词应展现侠肝义胆和团队协作。"
+            else:
+                personality = "现在你是农民，你需要与队友配合对抗地主。台词应展现侠肝义胆和团队协作。"
     else: # 晓伊
         base = "你叫晓伊，是一位温婉聪慧、睿智从容的古风少女，性格里带着一丝灵动和俏皮。"
         if phase == "bidding":
-            personality = "现在是叫号（抢地主）环节。一旦你叫分胜出，你将成为【地主】，独自一人对抗两个农民（小明和云希）。请根据手牌智慧决策。"
+            personality = "现在是叫号（抢地主）环节。一旦你叫分胜出，你将成为【【地主】，独自一人对抗两个农民（小明和云希）。请根据手牌智慧决策。"
+        elif phase == "chat":
+            personality = f"现在是闲聊环节。农民小明刚才对你说话了。请你根据他的话做出回应。保持你的人设，台词要极其简短。"
         elif is_landlord:
-            personality = "现在你是地主。你变得腹黑、高傲、优雅地嘲讽，视对手为股掌间的玩物，台词带着掌控全局的冷淡感。"
+            personality = "现在你是地主，独自一人一队，没有队友，你将对抗小明和云希。你变得腹黑、高傲、优雅地嘲讽，视对手为股掌间的玩物，台词带着掌控全局的冷淡感。"
         else:
-            personality = f"现在你是农民。你正与队友（农民 {other_ai_name}）共商破敌之策。台词应从容优雅，展现智谋。"
+            # 农民身份
+            if landlord_id == 0:
+                personality = "现在你是农民，你的队友是云希，你们两人一队，共同对抗地主小明。台词应从容优雅，展现智谋。"
+            elif landlord_id == 1:
+                personality = "现在你是农民，你的队友是小明，你们两人一队，共同对抗地主云希。台词应从容优雅，展现智谋。"
+            else:
+                personality = "现在你是农民，你需要与队友配合对抗地主。台词应从容优雅，展现智谋。"
 
     return f"""{base}
 {personality}
@@ -135,4 +149,18 @@ def get_playing_prompt(hand, must_play, last_play_desc, teammate_caution, format
 请做出决策，必须返回以下JSON格式：
 - 不要：{{"action": "pass", "dialogue": "台词"}}
 - 出牌：{{"action": "play", "cards": [精确的对象数组], "dialogue": "台词"}}
+"""
+
+def get_chat_prompt(player_message, history):
+    history_str = "\n".join(history[-5:])
+    return f"""**玩家（小明）对你说**："{player_message}"
+
+**最近历史记录**：
+{history_str}
+
+请给出你的人设回应。台词必须极其简短（20字以内）。
+输出格式必须是严格的 JSON：
+{{
+  "dialogue": "你的台词"
+}}
 """

@@ -1937,8 +1937,6 @@ async function sendPlayerChat() {
         setTimeout(async () => {
             // 云希先说
             await requestAIChat(AI1, text);
-            // 停顿 400ms 更自然
-            await new Promise(r => setTimeout(r, 400));
             // 晓伊再说
             await requestAIChat(AI2, text);
         }, 500);

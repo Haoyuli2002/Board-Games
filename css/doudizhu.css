@@ -1271,12 +1271,12 @@ body {
     position: absolute;
     background: linear-gradient(135deg, #2a1810, #3d2618, #4a2f1d);
     color: #fff;
-    padding: 8px 16px;
-    border-radius: 12px;
-    font-size: 13px;
+    padding: 12px 20px;
+    border-radius: 14px;
+    font-size: 17px;
     font-weight: 600;
-    min-width: 60px;
-    max-width: 200px;
+    min-width: 80px;
+    max-width: 400px;
     width: max-content;
     text-align: center;
     box-shadow:

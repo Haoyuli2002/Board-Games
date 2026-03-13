@@ -13,12 +13,11 @@ import edge_tts
 
 # Load environment variables
 load_dotenv()
-API_KEY = os.getenv("DeepSeek_API_KEY")
+API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Initialize DeepSeek client (using OpenAI compatible SDK)
+# Initialize OpenAI client
 client = AsyncOpenAI(
     api_key=API_KEY,
-    base_url="https://api.deepseek.com/v1"
 )
 
 app = FastAPI()
@@ -262,9 +261,9 @@ async def get_ai_decision(request: AIRequest):
 {{"bid": {valid_bids}中的一个数字, "dialogue": "你作为牌手说的一句简短台词（20字以内，对外交流口吻，不要自言自语）"}}
 """
             
-            print(f"DeepSeek 正在调用 (Bidding, Player {request.playerId})...", flush=True)
+            print(f"OpenAI 正在调用 (Bidding, Player {request.playerId})...", flush=True)
             response = await client.chat.completions.create(
-                model="deepseek-chat",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
@@ -274,7 +273,7 @@ async def get_ai_decision(request: AIRequest):
             content = response.choices[0].message.content
             resp_json = json.loads(content)
             bid = resp_json.get("bid", 0)
-            print(f"DeepSeek 调用成功 (Bidding): Player {request.playerId} 叫分: {bid}", flush=True)
+            print(f"OpenAI 调用成功 (Bidding): Player {request.playerId} 叫分: {bid}", flush=True)
             
             if bid not in valid_bids:
                 bid = 0
@@ -339,21 +338,26 @@ async def get_ai_decision(request: AIRequest):
 
 出牌规则与策略：
 1. **首要目标**：赢得比赛！不管是地主还是农民，你的任务是把牌出完。
-2. **进攻性**：作为大师级别AI，你应该尽可能掌控出牌权。不要盲目Pass。
-3. **农民配合**：
+2. **出牌顺序策略（极其重要！）**：
+   - **先出小牌，后出大牌！** 这是斗地主的基本常识。
+   - 当你拥有出牌权（首出或别人都Pass了）时，应该优先出手牌中最小的牌或最弱的组合（小单张、小对子等），把大牌留到后面关键时刻用来压制对手或收尾。
+   - **绝对不要**在拥有出牌权时直接甩大牌（如2、A、K），除非你只剩最后1-2手牌准备收尾。
+   - 只有在需要"管牌"（压过上家的牌）时，才使用刚好能压过的最小牌型，不要浪费大牌。
+3. **进攻性**：作为大师级别AI，你应该尽可能掌控出牌权。不要盲目Pass。
+4. **农民配合**：
    - 如果上家出的牌是你的队友出的：{teammate_caution}
    - 如果队友出的牌已经足够压制地主，你可以选择Pass；但如果队友牌比较小，或者地主（玩家0）已经Pass了，你应该果断接过来。
-4. **管牌逻辑**：如果有能力管上家的牌且有助于你跑掉手里的弱牌，请果断管牌。
-5. **台词要求**：**20 字以内**，必须是对外交流（对小明或队友说的话），严禁重复，严禁描述心理活动。
+5. **管牌逻辑**：如果有能力管上家的牌，用刚好能压过的最小牌管住，不要过度浪费大牌。
+6. **台词要求**：**20 字以内**，必须是对外交流（对小明或队友说的话），严禁重复，严禁描述心理活动。
 
 请做出决策，必须返回以下JSON格式：
 - 不要：{{"action": "pass", "dialogue": "台词"}}
 - 出牌：{{"action": "play", "cards": [精确的对象数组], "dialogue": "台词"}}
 """
 
-            print(f"DeepSeek 正在调用 (Playing, Player {request.playerId}, mustPlay={request.mustPlay})...", flush=True)
+            print(f"OpenAI 正在调用 (Playing, Player {request.playerId}, mustPlay={request.mustPlay})...", flush=True)
             response = await client.chat.completions.create(
-                model="deepseek-chat",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
@@ -379,7 +383,7 @@ async def get_ai_decision(request: AIRequest):
                 return {"decision": "FALLBACK"}
 
     except Exception as e:
-        print("Error calling DeepSeek API:", e)
+        print("Error calling OpenAI API:", e)
         return {"error": str(e), "decision": "FALLBACK", "dialogue": ""}
 
 class TTSRequest(BaseModel):

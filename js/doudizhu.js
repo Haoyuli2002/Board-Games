@@ -207,7 +207,7 @@ let G = {
 };
 
 const PLAYER = 0, AI1 = 1, AI2 = 2;
-const NAMES = ['你', '云希', '晓伊'];
+const NAMES = ['小明', '云希', '晓伊'];
 const ZONE_IDS = ['zone-player', 'zone-ai1', 'zone-ai2'];
 
 const AVATAR_MAP = {
@@ -708,7 +708,20 @@ function setAiMode(mode) {
 }
 
 function toggleRules() {
-    $('rulesPanel').classList.toggle('open');
+    const rules = $('rulesPanel');
+    if (rules) {
+        rules.classList.toggle('open');
+        // If opening rules, ensure result overlay is hidden to avoid overlapping
+        if (rules.classList.contains('open')) closeResult();
+    }
+}
+
+/**
+ * Close the result overlay
+ */
+function closeResult() {
+    const overlay = $('resultOverlay');
+    if (overlay) overlay.style.display = 'none';
 }
 
 // Build a card DOM element
@@ -770,17 +783,14 @@ async function getLLMDecision(context) {
         }
 
         // Display AI dialogue and play TTS audio if available
-        if (data.dialogue) {
-            // Await dialogue to match timing
-            await showAIDialogue(context.playerId, data.dialogue, true);
-            // Play edge-tts generated audio from backend and await completion
-            if (data.audio_base64) {
-                await playBase64Audio(data.audio_base64);
-            }
-        }
+        // NOTE: Dialogue manifestation is now deferred to doAIPlay to ensure decision is valid first
 
-        // Return both decision and dialogue for history tracking
-        return { decision, dialogue: data.dialogue || "" };
+        // Return all components for confirmation in doAIPlay
+        return {
+            decision,
+            dialogue: data.dialogue || "",
+            audio_base64: data.audio_base64 || ""
+        };
 
     } catch (e) {
         console.warn("Failed to connect to AI server, falling back to rule-based:", e);
@@ -1086,7 +1096,7 @@ async function aiBid(playerId) {
     // If master mode, try LLM first
     if (G.aiMode === 'master') {
         try {
-            const { decision: result, dialogue: llmDialogue } = await getLLMDecision({
+            const { decision: result, dialogue: llmDialogue, audio_base64 } = await getLLMDecision({
                 phase: 'bidding',
                 playerId: playerId,
                 hand: G.hands[playerId],
@@ -1095,7 +1105,13 @@ async function aiBid(playerId) {
             });
             if (typeof result === 'number' && result >= 0 && result <= 3) {
                 decision = result;
-                // Dialogue already handled in getLLMDecision
+                // Manifest dialogue and audio
+                if (llmDialogue) {
+                    showAIDialogue(playerId, llmDialogue, true);
+                    if (audio_base64) {
+                        playBase64Audio(audio_base64);
+                    }
+                }
                 return decision;
             }
         } catch (e) {
@@ -1379,7 +1395,7 @@ async function doAIPlay(playerId) {
     // If master mode, try LLM first
     if (G.aiMode === 'master') {
         try {
-            const { decision, dialogue } = await getLLMDecision({
+            const llmResult = await getLLMDecision({
                 phase: 'playing',
                 playerId: playerId,
                 hand: hand,
@@ -1389,19 +1405,23 @@ async function doAIPlay(playerId) {
                 pastRounds: G.pastRounds
             });
 
-            // LLM returned a decision — dialogue was already shown in getLLMDecision
-            llmDialogueShown = true;
+            const { decision, dialogue, audio_base64 } = llmResult;
             finalDialogue = dialogue;
 
             if (decision === 'PASS') {
                 if (mustPlay) {
                     console.warn(`AI ${playerId} (Master) tried to PASS on mustPlay. Falling back to rule-based.`);
-                    // llmDecisionValid stays false → will trigger rule-based fallback
                     llmDialogueShown = false;
                     finalDialogue = "";
                 } else {
-                    chosen = null; // Valid pass
-                    llmDecisionValid = true; // LLM decision accepted, skip fallback
+                    chosen = null;
+                    llmDecisionValid = true;
+                    // Success: manifest dialogue
+                    if (finalDialogue) {
+                        llmDialogueShown = true;
+                        showAIDialogue(playerId, finalDialogue, true);
+                        if (audio_base64) playBase64Audio(audio_base64);
+                    }
                 }
             } else if (Array.isArray(decision)) {
                 const validCards = decision.map(c => hand.find(h => h.rank === c.rank && h.suit === c.suit)).filter(Boolean);
@@ -1410,13 +1430,19 @@ async function doAIPlay(playerId) {
                     if (pattern && (mustPlay || canBeat(pattern, G.lastRealPlay.pattern))) {
                         chosen = validCards;
                         llmDecisionValid = true;
+                        // Success: manifest dialogue
+                        if (finalDialogue) {
+                            llmDialogueShown = true;
+                            showAIDialogue(playerId, finalDialogue, true);
+                            if (audio_base64) playBase64Audio(audio_base64);
+                        }
                     } else {
-                        console.warn(`AI ${playerId} (Master) returned illegal move:`, decision, "Falling back to rule-based.");
+                        console.warn(`AI ${playerId} (Master) returned illegal move (cannot beat or invalid pattern). Falling back.`);
                         llmDialogueShown = false;
                         finalDialogue = "";
                     }
                 } else {
-                    console.warn(`AI ${playerId} (Master) returned cards not in hand:`, decision, "Falling back to rule-based.");
+                    console.warn(`AI ${playerId} (Master) returned cards not in hand. Falling back.`);
                     llmDialogueShown = false;
                     finalDialogue = "";
                 }
